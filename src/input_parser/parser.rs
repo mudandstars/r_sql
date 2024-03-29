@@ -1,12 +1,12 @@
 use super::command::Command;
 
-pub struct ParsedInput {
+pub struct InputParser {
     command: Command,
     selection: Vec<String>,
-    table: String,
+    table_name: String,
 }
 
-impl ParsedInput {
+impl InputParser {
     pub fn new(input: String) -> Self {
         let mut input_vector = input.trim().split(' ');
 
@@ -46,22 +46,20 @@ impl ParsedInput {
             }
         }
 
-        let table = input_vector
+        let table_name = input_vector
             .next()
             .expect("Invalid query.")
             .replace(';', "");
 
-        ParsedInput {
+        InputParser {
             command,
             selection,
-            table,
+            table_name,
         }
     }
-
-    pub fn execute(self) {
-        println!("Executing query..")
-    }
 }
+
+
 
 #[cfg(test)]
 mod tests {
@@ -69,21 +67,21 @@ mod tests {
 
     #[test]
     fn test_can_create_a_parsed_input_from_a_simple_select_query() {
-        let parsed_input = ParsedInput::new(String::from("SELECT * FROM users;"));
+        let parsed_input = InputParser::new(String::from("SELECT * FROM users;"));
 
         assert_eq!(parsed_input.command.type_id(), Command::Select.type_id());
         assert_eq!(parsed_input.selection.first().unwrap(), "*");
-        assert_eq!(parsed_input.table, String::from("users"));
+        assert_eq!(parsed_input.table_name, String::from("users"));
     }
 
     #[test]
     fn test_can_create_a_parsed_input_from_a_select_query_for_specific_columns() {
-        let parsed_input = ParsedInput::new(String::from(
+        let parsed_input = InputParser::new(String::from(
             "SELECT id,foreign_id, number,name,job, another FROM users;",
         ));
 
         assert_eq!(parsed_input.command.type_id(), Command::Select.type_id());
-        assert_eq!(parsed_input.table, String::from("users"));
+        assert_eq!(parsed_input.table_name, String::from("users"));
 
         dbg!(&parsed_input.selection);
         assert_eq!(parsed_input.selection[0], "id");
