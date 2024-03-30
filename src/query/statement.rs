@@ -20,20 +20,17 @@ impl Statement {
             Self::Select {
                 table_name,
                 selection,
-            } => String::from(format!(
-                "SELECT {} FROM {};",
-                selection.join(", "),
-                table_name
-            )),
+            } => format!("SELECT {} FROM {};", selection.join(", "), table_name),
             Self::Insert {
                 table_name,
                 columns,
                 values,
-            } => String::from(format!(
-                "SELECT {} FROM {};",
+            } => format!(
+                "INSERT INTO {}({}) VALUES {};",
+                table_name,
                 columns.join(", "),
-                table_name
-            )),
+                values.join(", ")
+            ),
             Self::CreateTable {
                 table_name,
                 columns,
@@ -44,11 +41,11 @@ impl Statement {
                     column_strings.push(col.join(" "));
                 }
 
-                String::from(format!(
+                format!(
                     "CREATE TABLE {}(\n{}\n);",
                     table_name,
                     column_strings.join(",\n")
-                ))
+                )
             }
         }
     }
