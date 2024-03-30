@@ -1,5 +1,7 @@
 use super::Engine;
 use crate::query::{Query, Statement};
+use std::fs;
+use std::path;
 // use serde::{Deserialize, Serialize};
 // use serde_json;
 // use std::{self, fs::File};
@@ -42,6 +44,7 @@ impl BinaryEngine {
     }
 
     fn create_table(&self, query: Query) {
+fs::create_dir(String::from(&self.base_path) + query.statement).expect("Failed to create dir for new table.");
         // create the dir if not exists
         // create meta-data file
         // create first data-page file

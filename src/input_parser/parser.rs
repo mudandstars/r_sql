@@ -38,7 +38,7 @@ mod tests {
         let query = input_parser.parse_query(String::from("SELECT * FROM users;"));
 
         assert_eq!(
-            query.statement.as_string(),
+            query.statement.to_string(),
             String::from("SELECT * FROM users;")
         );
     }
@@ -51,7 +51,7 @@ mod tests {
         ));
 
         assert_eq!(
-            query.statement.as_string(),
+            query.statement.to_string(),
             String::from("SELECT id, foreign_id, number, name, job, another FROM users;")
         );
     }
@@ -68,7 +68,7 @@ mod tests {
         ));
 
         assert_eq!(
-            query.statement.as_string(),
+            query.statement.to_string(),
             String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
         );
     }

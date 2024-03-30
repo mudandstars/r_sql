@@ -1,3 +1,5 @@
+use core::fmt;
+
 pub enum Statement {
     Select {
         table_name: String,
@@ -15,17 +17,28 @@ pub enum Statement {
 }
 
 impl Statement {
-    pub fn as_string(&self) -> String {
+    pub fn table_name(&self) -> &str {
+        match self {
+            Self::Select { table_name, .. }
+            | Self::Insert { table_name, .. }
+            | Self::CreateTable { table_name, .. } => table_name,
+        }
+    }
+}
+
+impl fmt::Display for Statement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Select {
                 table_name,
                 selection,
-            } => format!("SELECT {} FROM {};", selection.join(", "), table_name),
+            } => write!(f, "SELECT {} FROM {};", selection.join(", "), table_name),
             Self::Insert {
                 table_name,
                 columns,
                 values,
-            } => format!(
+            } => write!(
+                f,
                 "INSERT INTO {}({}) VALUES {};",
                 table_name,
                 columns.join(", "),
@@ -41,7 +54,8 @@ impl Statement {
                     column_strings.push(col.join(" "));
                 }
 
-                format!(
+                write!(
+                    f,
                     "CREATE TABLE {}(\n{}\n);",
                     table_name,
                     column_strings.join(",\n")
