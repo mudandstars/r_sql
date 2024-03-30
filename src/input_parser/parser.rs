@@ -1,12 +1,10 @@
 use crate::query::Query;
 use crate::query::QueryType;
 
-pub struct InputParser {
-    query: Query,
-}
+pub struct InputParser();
 
 impl InputParser {
-    pub fn new(input: String) -> Self {
+    pub fn parse_query(self, input: String) -> Query {
         let mut input_vector = input.trim().split(' ');
 
         if !input_vector
@@ -50,13 +48,7 @@ impl InputParser {
             .expect("Invalid query.")
             .replace(';', "");
 
-        InputParser {
-            query: Query::new(input, query_type, selection, table_name),
-        }
-    }
-
-    pub fn query(self) -> Query {
-        self.query
+        Query::new(input, query_type, selection, table_name)
     }
 }
 
@@ -66,8 +58,8 @@ mod tests {
 
     #[test]
     fn test_can_create_a_parsed_input_from_a_simple_select_query() {
-        let parsed_input = InputParser::new(String::from("SELECT * FROM users;"));
-        let query = parsed_input.query();
+        let input_parser = InputParser();
+        let query = input_parser.parse_query(String::from("SELECT * FROM users;"));
 
         assert_eq!(query._type.type_id(), QueryType::Select.type_id());
         assert_eq!(query.selection.first().unwrap(), "*");
@@ -76,10 +68,10 @@ mod tests {
 
     #[test]
     fn test_can_create_a_parsed_input_from_a_select_query_for_specific_columns() {
-        let parsed_input = InputParser::new(String::from(
+        let input_parser = InputParser();
+        let query = input_parser.parse_query(String::from(
             "SELECT id,foreign_id, number,name,job, another FROM users;",
         ));
-        let query = parsed_input.query();
 
         assert_eq!(query._type.type_id(), QueryType::Select.type_id());
         assert_eq!(query.table_name, String::from("users"));
