@@ -1,31 +1,16 @@
-mod query_type;
+mod statement;
+mod statement_type;
 
-pub use crate::query::query_type::QueryType;
+pub use crate::query::statement::Statement;
+pub use crate::query::statement_type::StatementType;
 
 pub struct Query {
     pub text: String,
-    pub _type: QueryType,
-    pub selection: Option<Vec<String>>,
-    pub columns: Option<Vec<Vec<String>>>,
-    pub table_name: String,
-    pub subqueries: Option<Vec<Query>>,
+    pub statement: Statement,
 }
 
 impl Query {
-    pub fn new(
-        text: String,
-        _type: QueryType,
-        selection: Option<Vec<String>>,
-        columns: Option<Vec<Vec<String>>>,
-        table_name: String,
-    ) -> Self {
-        Query {
-            text,
-            _type,
-            selection,
-            columns,
-            table_name,
-            subqueries: None,
-        }
+    pub fn new(text: String, statement: Statement) -> Self {
+        Query { text, statement }
     }
 }

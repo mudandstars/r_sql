@@ -1,81 +1,90 @@
 use super::Engine;
-
-pub struct BinaryEngine();
-
-impl Engine for BinaryEngine {
-    fn execute(&self, query: crate::query::Query) {
-        println!("Writing in binary..");
-        println!("Executing query on table {}", query.table_name);
-    }
-}
-
-// use serde::{Serialize, Deserialize};
-// use serde_json::Value;
-// use std::fs::File;
-// use std::io::{self, Write, Read};
+use crate::query::{Query, Statement};
+// use serde::{Deserialize, Serialize};
+// use serde_json;
+// use std::{self, fs::File};
 
 // #[derive(Serialize, Deserialize, Debug)]
 // struct DynamicRecord {
-//     id: u32,
-//     data: Value, // Use `serde_json::Value` for dynamic data.
+//     data: serde_json::Value,
 // }
 
-// fn save_record(record: &DynamicRecord, filename: &str) -> io::Result<()> {
-//     let serialized = bincode::serialize(record).unwrap();
-//     let mut file = File::create(filename)?;
-//     file.write_all(&serialized)?;
-//     Ok(())
-// }
+pub struct BinaryEngine {
+    base_path: String,
+}
 
-// fn load_record(filename: &str) -> io::Result<DynamicRecord> {
-//     let mut file = File::open(filename)?;
-//     let mut data = Vec::new();
-//     file.read_to_end(&mut data)?;
-//     let record: DynamicRecord = bincode::deserialize(&data[..]).unwrap();
-//     Ok(record)
-// }
+impl Engine for BinaryEngine {
+    fn execute(&self, query: Query) {
+        println!("Writing in binary..");
+        println!("Executing query: '{}'", query.statement.as_string());
 
-// fn main() -> io::Result<()> {
-//     let record = DynamicRecord {
-//         id: 1,
-//         data: serde_json::json!({
-//             "name": "John Doe",
-//             "age": 30,
-//             "phones": [
-//                 "+44 1234567",
-//                 "+44 2345678"
-//             ]
-//         }),
-//     };
+        match &query.statement {
+            Statement::CreateTable {
+                table_name,
+                columns,
+            } => self.create_table(query),
+            Statement::Select {
+                table_name,
+                selection,
+            } => self.select(query),
+            Statement::Insert {
+                table_name,
+                columns,
+                values,
+            } => self.insert(query),
+        }
+    }
+}
 
-//     save_record(&record, "record.dat")?;
+impl BinaryEngine {
+    pub fn new(base_path: String) -> Self {
+        BinaryEngine { base_path }
+    }
 
-//     let loaded_record = load_record("record.dat")?;
-//     println!("Loaded record: {:?}", loaded_record);
+    fn create_table(&self, query: Query) {
+        // create the dir if not exists
+        // create meta-data file
+        // create first data-page file
+        // let mut file = File::create(query.table_name);
+    }
 
-//     Ok(())
-// }
+    fn insert(&self, query: Query) {
+        // insert data into file
+        //     let record = DynamicRecord {
+        //         id: 1,
+        //         data: serde_json::json!({
+        //             "name": "John Doe",
+        //             "age": 30,
+        //             "phones": [
+        //                 "+44 1234567",
+        //                 "+44 2345678"
+        //             ]
+        //         }),
+        //     };
+        // fn save_record(record: &DynamicRecord, filename: &str) -> std::io::Result<()> {
+        //     let serialized = bincode::serialize(record).unwrap();
+        //     let mut file = File::create(filename)?;
+        //     file.write_all(&serialized)?;
+        //     Ok(())
+        // }
+    }
 
-// use serde::{Serialize, Deserialize};
-// use bincode;
-// use std::fs::File;
-// use std::io::{self, Write};
+    fn select(&self, query: Query) {
+        // retrieve data from file
+        // fn load_record(filename: &str) -> io::Result<DynamicRecord> {
+        //     let mut file = File::open(filename)?;
+        //     let mut data = Vec::new();
+        //     file.read_to_end(&mut data)?;
+        //     let record: DynamicRecord = bincode::deserialize(&data[..]).unwrap();
+        //     Ok(record)
+        // }
+    }
+}
 
-// #[derive(Serialize, Deserialize)]
-// struct Record {
-//     // Your record fields
-// }
-
-// #[derive(Serialize, Deserialize)]
-// struct Page {
-//     records: Vec<Record>, // Assume this is your 'fixed-size' block, conceptually
-// }
-
-// fn serialize_page(page: &Page) -> io::Result<()> {
-//     let serialized = bincode::serialize(&page).unwrap();
-//     let mut file = File::create("page.dat")?;
-//     file.write_all(&serialized)?;
-//     Ok(())
-// }
-
-// // Deserialization and data retrieval functions would be similar in reverse.
+impl Default for BinaryEngine {
+    fn default() -> Self {
+        BinaryEngine {
+            base_path: String::from("../data"),
+        }
+    }
+}
