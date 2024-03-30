@@ -21,6 +21,9 @@ impl InputParser {
         }
 
         let query_type = QueryType::new(&mut query_iter);
+        if query_type.id() == QueryType::Invalid.id() {
+            panic!("Unimplemented Command. Please use 'SELECT', 'CREATE TABLE' or 'INSERT'");
+        }
 
         match query_type {
             QueryType::Select => {
@@ -42,7 +45,7 @@ impl InputParser {
         let mut selection: Vec<String> = Vec::new();
         let mut current_word = "";
 
-        while true {
+        loop {
             let current_slice_vector: Vec<&str> = query_iter
                 .next()
                 .expect("Invalid query.")
@@ -86,19 +89,21 @@ impl InputParser {
         let mut current_column: Vec<String> = Vec::new();
         let mut current_word = "";
 
-        while true {
-            while true {
-                if current_word.ends_with(',') {
-                    columns.push(current_column);
-                    current_column = Vec::new();
-                    break;
-                }
-
-                current_word = query_iter.next().expect("Invalid query.");
-                current_column.push(current_word.replace(',', ""));
-            }
+        loop {
             if current_word == ");" {
+                columns.push(current_column);
                 break;
+            }
+
+            if current_word.ends_with(',') {
+                columns.push(current_column);
+                current_column = Vec::new();
+            }
+
+            current_word = query_iter.next().expect("Invalid query.");
+
+            if !current_word.is_empty() {
+                current_column.push(current_word.replace(',', ""));
             }
         }
 
@@ -157,7 +162,8 @@ mod tests {
         let columns = query.columns.unwrap();
 
         assert_eq!(columns[0][0], String::from("id"));
-        assert_eq!(columns[0][1], String::from("PRIMARY KEY"));
+        assert_eq!(columns[0][1], String::from("PRIMARY"));
+        assert_eq!(columns[0][2], String::from("KEY"));
 
         assert_eq!(columns[1][0], String::from("name"));
         assert_eq!(columns[1][1], String::from("VARCHAR"));

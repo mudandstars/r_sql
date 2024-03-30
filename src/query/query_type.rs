@@ -41,7 +41,6 @@ impl From<&str> for QueryType {
             "INSERT INTO" => QueryType::Insert,
             "CREATE TABLE" => QueryType::CreateTable,
             _ => QueryType::Invalid,
-            // _ => panic!("Unimplemented Command. Please use 'SELECT', 'CREATE TABLE' or 'INSERT'"),
         }
     }
 }
