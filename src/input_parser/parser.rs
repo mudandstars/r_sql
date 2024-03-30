@@ -1,9 +1,8 @@
-use super::command::Command;
+use crate::query::Query;
+use crate::query::QueryType;
 
 pub struct InputParser {
-    command: Command,
-    selection: Vec<String>,
-    table_name: String,
+    query: Query,
 }
 
 impl InputParser {
@@ -19,7 +18,7 @@ impl InputParser {
             panic!("Your statement must end with a semicolon.")
         }
 
-        let command = Command::from(input_vector.next().expect("Invalid query."));
+        let query_type = QueryType::from(input_vector.next().expect("Invalid query."));
 
         let mut selection: Vec<String> = Vec::new();
         let mut current_word = "";
@@ -52,14 +51,14 @@ impl InputParser {
             .replace(';', "");
 
         InputParser {
-            command,
-            selection,
-            table_name,
+            query: Query::new(input, query_type, selection, table_name),
         }
     }
+
+    pub fn query(self) -> Query {
+        self.query
+    }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -68,10 +67,11 @@ mod tests {
     #[test]
     fn test_can_create_a_parsed_input_from_a_simple_select_query() {
         let parsed_input = InputParser::new(String::from("SELECT * FROM users;"));
+        let query = parsed_input.query();
 
-        assert_eq!(parsed_input.command.type_id(), Command::Select.type_id());
-        assert_eq!(parsed_input.selection.first().unwrap(), "*");
-        assert_eq!(parsed_input.table_name, String::from("users"));
+        assert_eq!(query._type.type_id(), QueryType::Select.type_id());
+        assert_eq!(query.selection.first().unwrap(), "*");
+        assert_eq!(query.table_name, String::from("users"));
     }
 
     #[test]
@@ -79,16 +79,17 @@ mod tests {
         let parsed_input = InputParser::new(String::from(
             "SELECT id,foreign_id, number,name,job, another FROM users;",
         ));
+        let query = parsed_input.query();
 
-        assert_eq!(parsed_input.command.type_id(), Command::Select.type_id());
-        assert_eq!(parsed_input.table_name, String::from("users"));
+        assert_eq!(query._type.type_id(), QueryType::Select.type_id());
+        assert_eq!(query.table_name, String::from("users"));
 
-        dbg!(&parsed_input.selection);
-        assert_eq!(parsed_input.selection[0], "id");
-        assert_eq!(parsed_input.selection[1], "foreign_id");
-        assert_eq!(parsed_input.selection[2], "number");
-        assert_eq!(parsed_input.selection[3], "name");
-        assert_eq!(parsed_input.selection[4], "job");
-        assert_eq!(parsed_input.selection[5], "another");
+        dbg!(&query.selection);
+        assert_eq!(query.selection[0], "id");
+        assert_eq!(query.selection[1], "foreign_id");
+        assert_eq!(query.selection[2], "number");
+        assert_eq!(query.selection[3], "name");
+        assert_eq!(query.selection[4], "job");
+        assert_eq!(query.selection[5], "another");
     }
 }
