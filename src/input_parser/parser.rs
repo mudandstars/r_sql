@@ -72,4 +72,17 @@ mod tests {
             String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
         );
     }
+
+    #[test]
+    fn test_can_parse_a_table_statement_without_unnecessary_whitespace() {
+        let input_parser = InputParser();
+        let query = input_parser.parse_query(String::from(
+            "CREATE TABLE users(id PRIMARY KEY, name VARCHAR, email VARCHAR);",
+        ));
+
+        assert_eq!(
+            query.statement.to_string(),
+            String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
+        );
+    }
 }

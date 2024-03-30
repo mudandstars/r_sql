@@ -1,5 +1,6 @@
 pub mod input_parser;
 pub mod io;
+pub mod metadata;
 pub mod query;
 
 pub struct SQLEngine {
