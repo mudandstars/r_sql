@@ -20,7 +20,7 @@ impl SQLEngine {
 
         let query = self.input_parser.parse_query(query);
 
-        // self.io_engine.execute(query);
+        self.io_engine.execute(query);
     }
 }
 

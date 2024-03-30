@@ -9,7 +9,7 @@ pub fn io_engine_factory(storage_type: self::Type) -> Box<dyn self::Engine> {
 }
 
 pub trait Engine {
-    fn execute(self, query: Query);
+    fn execute(&self, query: Query);
 }
 
 pub enum Type {

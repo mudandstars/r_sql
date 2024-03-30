@@ -7,7 +7,7 @@ use crate::query::QueryType;
 pub struct InputParser();
 
 impl InputParser {
-    pub fn parse_query(self, input: String) -> Query {
+    pub fn parse_query(&self, input: String) -> Query {
         let cleaned_input = input.trim().replace('\n', "");
         let mut query_iter = cleaned_input.split(' ');
 
@@ -37,7 +37,7 @@ impl InputParser {
     }
 
     fn parse_select_statement(
-        self,
+        &self,
         input: String,
         query_iter: &mut Split<'_, char>,
         query_type: QueryType,
@@ -73,7 +73,7 @@ impl InputParser {
     }
 
     fn parse_create_table_statement(
-        self,
+        &self,
         input: String,
         query_iter: &mut Split<'_, char>,
         query_type: QueryType,
