@@ -1,6 +1,7 @@
 use super::Engine;
 use crate::metadata::{self, Table};
 use crate::query::{Query, Statement};
+use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
@@ -44,8 +45,15 @@ impl Engine for BinaryEngine {
 }
 
 impl BinaryEngine {
-    pub fn new(base_path: String) -> Self {
-        BinaryEngine { base_path }
+    pub fn new() -> Self {
+        dotenv().ok();
+
+        let database_base_dir =
+            std::env::var("DATABASE_BASE_DIR").expect("DATABASE_BASE_DIR must be set");
+
+        BinaryEngine {
+            base_path: database_base_dir,
+        }
     }
 
     fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> io::Result<()> {
