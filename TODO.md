@@ -1,4 +1,3 @@
-store to path specified in .env
 allow insertion using the meta-data constraints
 
 -   get user input via cli once the engine is started
