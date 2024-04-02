@@ -5,10 +5,10 @@ pub enum Statement {
         table_name: String,
         selection: Vec<String>,
     },
-    Insert {
+    InsertInto {
         table_name: String,
         columns: Vec<String>,
-        values: Vec<String>,
+        values: Vec<Vec<String>>,
     },
     CreateTable {
         table_name: String,
@@ -20,7 +20,7 @@ impl Statement {
     pub fn table_name(&self) -> &str {
         match self {
             Self::Select { table_name, .. }
-            | Self::Insert { table_name, .. }
+            | Self::InsertInto { table_name, .. }
             | Self::CreateTable { table_name, .. } => table_name,
         }
     }
@@ -33,17 +33,24 @@ impl fmt::Display for Statement {
                 table_name,
                 selection,
             } => write!(f, "SELECT {} FROM {};", selection.join(", "), table_name),
-            Self::Insert {
+            Self::InsertInto {
                 table_name,
                 columns,
                 values,
-            } => write!(
-                f,
-                "INSERT INTO {}({}) VALUES {};",
-                table_name,
-                columns.join(", "),
-                values.join(", ")
-            ),
+            } => {
+                let mut values_strings: Vec<String> = Vec::new();
+
+                for col in values.iter() {
+                    values_strings.push(col.join(" "));
+                }
+                write!(
+                    f,
+                    "INSERT INTO {}(\n{}\n) VALUES {};",
+                    table_name,
+                    columns.join(", "),
+                    values_strings.join(", ")
+                )
+            }
             Self::CreateTable {
                 table_name,
                 columns,

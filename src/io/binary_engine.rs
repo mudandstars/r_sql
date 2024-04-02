@@ -19,8 +19,7 @@ pub struct BinaryEngine {
 
 impl Engine for BinaryEngine {
     fn execute(&self, query: Query) {
-        println!("Writing in binary..");
-        println!("Executing query: '{}'", query.statement);
+        println!("\tWriting in binary..");
 
         let result = match &query.statement {
             Statement::CreateTable {
@@ -31,7 +30,7 @@ impl Engine for BinaryEngine {
                 table_name,
                 selection,
             } => self.select(query),
-            Statement::Insert {
+            Statement::InsertInto {
                 table_name,
                 columns,
                 values,
@@ -39,7 +38,7 @@ impl Engine for BinaryEngine {
         };
 
         if result.is_err() {
-            println!("The following error occured when trying to write the data..");
+            println!("\tERROR: An error occured while trying to write..");
         }
     }
 }
@@ -60,12 +59,12 @@ impl BinaryEngine {
         let table_path = String::from(&self.base_path) + "/" + &table_name;
 
         if !path::Path::new(&table_path).exists() {
-            fs::create_dir(table_path.clone()).expect("Failed to create dir for new table.");
+            fs::create_dir(table_path.clone()).expect("\tFailed to create dir for new table.");
         }
 
         let table = metadata::Table::new(table_name, columns);
         self.store_meta_data(&table)
-            .expect("Failed to store meta-data.");
+            .expect("\tFailed to store meta-data.");
 
         fs::File::create(table_path + "/data_page_1.bin")?;
 

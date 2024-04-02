@@ -74,15 +74,28 @@ mod tests {
     }
 
     #[test]
-    fn test_can_parse_a_table_statement_without_unnecessary_whitespace() {
+    fn test_can_parse_a_create_table_statement_without_unnecessary_whitespace() {
         let input_parser = InputParser();
         let query = input_parser.parse_query(String::from(
-            "CREATE TABLE users(id PRIMARY KEY, name VARCHAR, email VARCHAR);",
+            "CREATE TABLE users(id PRIMARY KEY,name VARCHAR, email VARCHAR);",
         ));
 
         assert_eq!(
             query.statement.to_string(),
             String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
+        );
+    }
+
+    #[test]
+    fn test_can_parse_an_insert_statement() {
+        let input_parser = InputParser();
+
+        let query = input_parser.parse_query(String::from(
+            "INSERT INTO users(name,email, number) VALUES ('felix', 'felix@gmail.de', 12345), ('paul', 'paul@mail.com', 67890);",
+        ));
+        assert_eq!(
+            query.statement.to_string(),
+            String::from("INSERT INTO users(\nname, email, number\n) VALUES (\n'felix', 'felix@gmail.de', 12345\n), (\n'paul', 'paul@mail.com', 67890\n);")
         );
     }
 }

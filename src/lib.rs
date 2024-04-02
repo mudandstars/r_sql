@@ -17,7 +17,7 @@ impl SQLEngine {
     }
 
     pub fn execute(&self, query: String) {
-        println!("Executing query..");
+        println!("\tExecuting query..");
 
         let query = self.input_parser.parse_query(query);
 

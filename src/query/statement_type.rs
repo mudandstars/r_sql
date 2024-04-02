@@ -4,7 +4,7 @@ use std::str::Split;
 pub enum StatementType {
     Invalid,
     Select,
-    Insert,
+    InsertInto,
     CreateTable,
 }
 
@@ -34,7 +34,7 @@ impl StatementType {
         match self {
             StatementType::Invalid => 0,
             StatementType::Select => 1,
-            StatementType::Insert => 2,
+            StatementType::InsertInto => 2,
             StatementType::CreateTable => 3,
         }
     }
@@ -44,7 +44,7 @@ impl From<&str> for StatementType {
     fn from(value: &str) -> Self {
         match value.to_uppercase().as_ref() {
             "SELECT" => StatementType::Select,
-            "INSERT INTO" => StatementType::Insert,
+            "INSERT INTO" => StatementType::InsertInto,
             "CREATE TABLE" => StatementType::CreateTable,
             _ => StatementType::Invalid,
         }
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn test_creates_insert_command_correctly() {
         let query_type = StatementType::new(&mut "insert into".split(' '));
-        assert_eq!(query_type.id(), StatementType::Insert.id());
+        assert_eq!(query_type.id(), StatementType::InsertInto.id());
     }
 
     #[test]
