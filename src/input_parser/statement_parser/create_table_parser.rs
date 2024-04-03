@@ -1,95 +1,83 @@
-use crate::{input_parser::QueryIterator, query::Statement};
+use crate::query::Statement;
 
 use super::StatementParser;
 
-pub struct CreateTableStatementParser();
+const VARCHAR_GRAPHEME: &str = "VARCHAR";
+const CREATE_TABLE_GRAPHEMS: [&str; 2] = ["CREATE", "TABLE"];
+const AVAILABLE_DATA_TYPES: [&str; 3] = [VARCHAR_GRAPHEME, "PRIMARY", "KEY"];
+
+pub struct CreateTableStatementParser {
+    state: ParserState,
+}
 
 impl StatementParser for CreateTableStatementParser {
-    fn parse_statement(&mut self, query_iterator: &mut QueryIterator) -> Statement {
-        let mut split_table_name_iterator =
-            query_iterator.next().expect("Invalid query.").split('(');
-
-        let table_name = split_table_name_iterator
-            .next()
-            .expect("Invalid query.")
-            .to_string();
-
+    fn parse_statement(&mut self, graphemes: Vec<String>) -> Statement {
+        let mut table_name = String::new();
         let mut columns: Vec<Vec<String>> = Vec::new();
         let mut current_column: Vec<String> = Vec::new();
-        let mut current_word = "";
+        let mut previous_grapheme: &str;
 
-        if split_table_name_iterator.clone().next().is_some()
-            && !split_table_name_iterator.clone().next().unwrap().is_empty()
-        {
-            current_column.push(split_table_name_iterator.next().unwrap().to_string());
-        }
+        for grapheme in graphemes {
+            let changed_parser_state = self.change_parser_state(&grapheme);
 
-        loop {
-            if self.is_last_word(current_word) {
-                self.push_last_word_onto_column(current_word.to_string(), &mut current_column);
-
-                columns.push(current_column);
-                break;
+            if changed_parser_state {
+                continue;
             }
 
-            self.handle_remaining_column_cases(
-                current_word.to_string(),
-                &mut current_column,
-                &mut columns,
-            );
+            match self.state {
+                ParserState::TableName => {
+                    if grapheme != CREATE_TABLE_GRAPHEMS[0] && grapheme != CREATE_TABLE_GRAPHEMS[1]
+                    {
+                        table_name = grapheme.to_string();
+                        self.state = ParserState::Columns
+                    }
+                }
+                ParserState::Columns => {
+                    if grapheme == "(" || grapheme == ")" {
+                        continue;
+                    }
 
-            current_word = query_iterator.next().expect("Invalid query.");
+                    if grapheme == "," || grapheme == ";" {
+                        columns.push(current_column);
+                        current_column = Vec::new();
+                        continue;
+                    }
+
+                    current_column.push(grapheme.to_string());
+                }
+            }
         }
 
         Statement::CreateTable {
-            columns,
             table_name,
+            columns,
         }
     }
 }
 
 impl CreateTableStatementParser {
-    fn handle_remaining_column_cases(
-        &self,
-        word: String,
-        column: &mut Vec<String>,
-        columns: &mut Vec<Vec<String>>,
-    ) {
-        if self.column_ends_here(&word) {
-            self.push_word_onto_column(word.to_string(), column);
-
-            columns.push(column.to_vec());
-            *column = Vec::new();
-        } else if word.contains(',') {
-            let mut subwords = word.split(',');
-
-            self.push_word_onto_column(subwords.next().unwrap().to_string(), column);
-            columns.push(column.to_vec());
-            *column = Vec::new();
-
-            self.push_word_onto_column(subwords.next().unwrap().to_string(), column);
-        } else {
-            self.push_word_onto_column(word.to_string(), column);
+    pub fn new() -> Self {
+        Self {
+            state: ParserState::TableName,
         }
     }
 
-    fn push_word_onto_column(&self, word: String, column: &mut Vec<String>) {
-        if !word.is_empty() && !word.ends_with(");") && word != "," {
-            column.push(word.replace(',', ""));
+    fn change_parser_state(&mut self, grapheme: &str) -> bool {
+        match self.state {
+            ParserState::TableName => {
+                if grapheme == "(" {
+                    self.state = ParserState::Columns;
+                    true
+                } else {
+                    false
+                }
+            }
+            ParserState::Columns => false,
         }
     }
+}
 
-    fn push_last_word_onto_column(&self, word: String, column: &mut Vec<String>) {
-        if !word.is_empty() && word != ");" {
-            column.push(word.replace(',', "").replace(");", ""));
-        }
-    }
-
-    fn is_last_word(&self, word: &str) -> bool {
-        word.ends_with(");")
-    }
-
-    fn column_ends_here(&self, word: &str) -> bool {
-        word.ends_with(',')
-    }
+enum ParserState {
+    TableName,
+    Columns,
 }

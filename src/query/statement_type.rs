@@ -1,5 +1,3 @@
-use std::str::Split;
-
 #[derive(Debug)]
 pub enum StatementType {
     Invalid,
@@ -9,14 +7,11 @@ pub enum StatementType {
 }
 
 impl StatementType {
-    pub fn new(query: &mut Split<'_, char>) -> Self {
-        let first_word = query.next().expect("Invalid query.");
-
-        let statement_type = StatementType::from(first_word);
+    pub fn new(first_grapheme: &str, second_grapheme: &str) -> Self {
+        let statement_type = StatementType::from(first_grapheme);
 
         if statement_type.id() == StatementType::Invalid.id() {
-            let second_word = query.next().expect("Invalid query.");
-            let first_two_words = format!("{} {}", first_word, second_word);
+            let first_two_words = format!("{} {}", first_grapheme, second_grapheme);
 
             let statement_type = StatementType::from(first_two_words.as_str());
 
@@ -57,25 +52,25 @@ mod tests {
 
     #[test]
     fn test_creates_select_command_correctly() {
-        let query_type = StatementType::new(&mut "select".split(' '));
+        let query_type = StatementType::new("select", "asdfasdf");
         assert_eq!(query_type.id(), StatementType::Select.id());
 
-        let query_type = StatementType::new(&mut "SELECT".split(' '));
+        let query_type = StatementType::new("SELECT", "sadf");
         assert_eq!(query_type.id(), StatementType::Select.id());
 
-        let query_type = StatementType::new(&mut "sElEcT".split(' '));
+        let query_type = StatementType::new("sElEcT", "1209nasdc");
         assert_eq!(query_type.id(), StatementType::Select.id());
     }
 
     #[test]
     fn test_creates_insert_command_correctly() {
-        let query_type = StatementType::new(&mut "insert into".split(' '));
+        let query_type = StatementType::new("insert", "into");
         assert_eq!(query_type.id(), StatementType::InsertInto.id());
     }
 
     #[test]
     fn test_creates_create_table_command_correctly() {
-        let query_type = StatementType::new(&mut "create table".split(' '));
+        let query_type = StatementType::new("create", "table");
         assert_eq!(query_type.id(), StatementType::CreateTable.id());
     }
 }

@@ -8,16 +8,14 @@ use crate::input_parser::statement_parser::select_parser::SelectStatementParser;
 
 use crate::query::{Statement, StatementType};
 
-use super::QueryIterator;
-
 pub trait StatementParser {
-    fn parse_statement(&mut self, query_iterator: &mut QueryIterator) -> Statement;
+    fn parse_statement(&mut self, graphemes: Vec<String>) -> Statement;
 }
 
 pub fn statement_parser_factory(statement_type: StatementType) -> Box<dyn StatementParser> {
     match statement_type {
-        StatementType::CreateTable => Box::new(CreateTableStatementParser()),
-        StatementType::Select => Box::new(SelectStatementParser()),
+        StatementType::CreateTable => Box::new(CreateTableStatementParser::new()),
+        StatementType::Select => Box::new(SelectStatementParser::new()),
         StatementType::InsertInto => Box::new(InsertIntoParser::new()),
         _ => panic!("Not implemented yet."),
     }
