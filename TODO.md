@@ -1,7 +1,6 @@
 allow insertion using the meta-data constraints
 setup github actions tests
 
--   parse create table and insert statements
 -   implement io engine
 -   indices
     -   B-Tree
