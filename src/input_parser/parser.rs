@@ -28,7 +28,7 @@ impl InputParser {
             }
         }
 
-        if graphemes.last().expect("Query is required.").to_string() != ";" {
+        if graphemes.last().expect("Query is required.") != ";" {
             panic!("Your statement must end with a semicolon.")
         } else if graphemes.len() < 2 {
             panic!("Invalid query.")
