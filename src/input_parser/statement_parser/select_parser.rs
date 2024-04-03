@@ -5,7 +5,7 @@ use super::StatementParser;
 pub struct SelectStatementParser();
 
 impl StatementParser for SelectStatementParser {
-    fn parse_statement(&self, query_iterator: &mut QueryIterator) -> Statement {
+    fn parse_statement(&mut self, query_iterator: &mut QueryIterator) -> Statement {
         let mut selection: Vec<String> = Vec::new();
         let mut current_word = "";
 

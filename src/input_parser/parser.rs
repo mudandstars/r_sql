@@ -22,7 +22,7 @@ impl InputParser {
 
         let statement_type = StatementType::new(&mut query_iterator);
 
-        let statement_parser = statement_parser_factory(statement_type);
+        let mut statement_parser = statement_parser_factory(statement_type);
 
         Query::new(input, statement_parser.parse_statement(&mut query_iterator))
     }

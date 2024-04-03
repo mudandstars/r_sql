@@ -41,7 +41,7 @@ impl fmt::Display for Statement {
                 let mut values_strings: Vec<String> = Vec::new();
 
                 for col in values.iter() {
-                    values_strings.push(col.join(" "));
+                    values_strings.push(format!("(\n{}\n)", col.join(", ")));
                 }
                 write!(
                     f,

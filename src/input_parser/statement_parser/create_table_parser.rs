@@ -5,7 +5,7 @@ use super::StatementParser;
 pub struct CreateTableStatementParser();
 
 impl StatementParser for CreateTableStatementParser {
-    fn parse_statement(&self, query_iterator: &mut QueryIterator) -> Statement {
+    fn parse_statement(&mut self, query_iterator: &mut QueryIterator) -> Statement {
         let mut split_table_name_iterator =
             query_iterator.next().expect("Invalid query.").split('(');
 

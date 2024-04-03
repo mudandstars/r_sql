@@ -1,6 +1,6 @@
 allow insertion using the meta-data constraints
+setup github actions tests
 
--   get user input via cli once the engine is started
 -   parse create table and insert statements
 -   implement io engine
 -   indices
