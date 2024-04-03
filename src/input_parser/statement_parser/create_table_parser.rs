@@ -2,9 +2,7 @@ use crate::query::Statement;
 
 use super::StatementParser;
 
-const VARCHAR_GRAPHEME: &str = "VARCHAR";
 const CREATE_TABLE_GRAPHEMS: [&str; 2] = ["CREATE", "TABLE"];
-const AVAILABLE_DATA_TYPES: [&str; 3] = [VARCHAR_GRAPHEME, "PRIMARY", "KEY"];
 
 pub struct CreateTableStatementParser {
     state: ParserState,
@@ -15,7 +13,6 @@ impl StatementParser for CreateTableStatementParser {
         let mut table_name = String::new();
         let mut columns: Vec<Vec<String>> = Vec::new();
         let mut current_column: Vec<String> = Vec::new();
-        let mut previous_grapheme: &str;
 
         for grapheme in graphemes {
             let changed_parser_state = self.change_parser_state(&grapheme);
