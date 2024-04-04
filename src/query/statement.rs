@@ -7,7 +7,7 @@ pub enum Statement {
     },
     InsertInto {
         table_name: String,
-        columns: Vec<String>,
+        column_names: Vec<String>,
         values: Vec<Vec<String>>,
     },
     CreateTable {
@@ -35,7 +35,7 @@ impl fmt::Display for Statement {
             } => write!(f, "SELECT {} FROM {};", selection.join(", "), table_name),
             Self::InsertInto {
                 table_name,
-                columns,
+                column_names: columns,
                 values,
             } => {
                 let mut values_strings: Vec<String> = Vec::new();

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Table {
     pub name: String,
-    columns: Vec<Column>,
+    pub columns: Vec<Column>,
 }
 
 impl Table {
@@ -26,7 +26,7 @@ impl Table {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Column {
+pub struct Column {
     pub name: String,
     pub data_type: String,
     pub nullable: bool,

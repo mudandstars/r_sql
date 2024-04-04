@@ -15,3 +15,7 @@ pub trait Engine {
 pub enum Type {
     Binary,
 }
+
+fn raise_error(error: &str) {
+    panic!("{}", error);
+}

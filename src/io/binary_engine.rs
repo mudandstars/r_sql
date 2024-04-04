@@ -1,9 +1,10 @@
 use super::Engine;
-use crate::metadata::{self, Table};
+use crate::metadata;
 use crate::query::{Query, Statement};
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path;
@@ -21,24 +22,24 @@ impl Engine for BinaryEngine {
     fn execute(&self, query: Query) {
         println!("\tWriting in binary..");
 
-        let result = match &query.statement {
+        let result = match query.statement {
             Statement::CreateTable {
                 table_name,
                 columns,
-            } => self.create_table(table_name.clone(), columns.clone()),
+            } => self.create_table(table_name, columns),
             Statement::Select {
                 table_name,
                 selection,
-            } => self.select(query),
+            } => self.select(table_name, selection),
             Statement::InsertInto {
                 table_name,
-                columns,
+                column_names,
                 values,
-            } => self.insert(query),
+            } => self.insert(table_name, column_names, values),
         };
 
         if result.is_err() {
-            println!("\tERROR: An error occured while trying to write..");
+            super::raise_error("\tERROR: An error occured while trying to write..");
         }
     }
 }
@@ -62,7 +63,7 @@ impl BinaryEngine {
             fs::create_dir(table_path.clone()).expect("\tFailed to create dir for new table.");
         }
 
-        let table = metadata::Table::new(table_name, columns);
+        let table = metadata::Table::new(table_name.clone(), columns.clone());
         self.store_meta_data(&table)
             .expect("\tFailed to store meta-data.");
 
@@ -71,7 +72,7 @@ impl BinaryEngine {
         Ok(())
     }
 
-    fn store_meta_data(&self, table: &Table) -> io::Result<()> {
+    fn store_meta_data(&self, table: &metadata::Table) -> io::Result<()> {
         let path = format!("{}/{}/metadata.bin", self.base_path, table.name);
 
         let serialized_table = &bincode::serialize(table).unwrap();
@@ -82,7 +83,7 @@ impl BinaryEngine {
         Ok(())
     }
 
-    fn load_meta_data(&self, table_name: String) -> io::Result<Table> {
+    fn load_meta_data(&self, table_name: &str) -> io::Result<metadata::Table> {
         let path = format!("{}/{}/metadata.bin", self.base_path, table_name);
 
         let mut file = fs::File::open(path)?;
@@ -90,34 +91,70 @@ impl BinaryEngine {
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)?;
 
-        let table: Table = bincode::deserialize(&buffer[..]).unwrap();
+        let metadata: metadata::Table = bincode::deserialize(&buffer[..]).unwrap();
 
-        Ok(table)
+        Ok(metadata)
     }
 
-    fn insert(&self, query: Query) -> io::Result<()> {
-        // insert data into file
-        //     let record = DynamicRecord {
-        //         id: 1,
-        //         data: serde_json::json!({
-        //             "name": "John Doe",
-        //             "age": 30,
-        //             "phones": [
-        //                 "+44 1234567",
-        //                 "+44 2345678"
-        //             ]
-        //         }),
-        //     };
-        // fn save_record(record: &DynamicRecord, filename: &str) -> std::io::Result<()> {
-        //     let serialized = bincode::serialize(record).unwrap();
-        //     let mut file = File::create(filename)?;
-        //     file.write_all(&serialized)?;
-        //     Ok(())
-        // }
+    fn insert(
+        &self,
+        table_name: String,
+        column_names: Vec<String>,
+        values: Vec<Vec<String>>,
+    ) -> io::Result<()> {
+        let metadata = self.load_meta_data(&table_name);
+        // TODO metadata does not load properly
+
+        if metadata.is_err() {
+            super::raise_error(format!("Table '{}' does not exist.", table_name).as_str())
+        }
+
+        // for each value in values
+        // for each column_names
+        // if it is in metadata.column_names
+        // add it to the json and set the value to the value of the index
+
+        let metadata_columns = metadata.unwrap().columns;
+
+        for value_vec in values {
+            let mut dynamic_data = collections::HashMap::new();
+
+            for (index, column_name) in column_names.iter().enumerate() {
+                for metadata_column in &metadata_columns {
+                    if metadata_column.name == column_name.as_str() {
+                        //TODO implement check that column_names length must equal values length in respective parser
+                        //TODO imlement type checks
+                        dynamic_data
+                            .insert(column_name.to_string(), serde_json::json!(value_vec[index]));
+                    }
+                }
+            }
+
+            let data = serde_json::Value::Object(dynamic_data.into_iter().collect());
+            let record = DynamicRecord { data };
+
+            self.save_record(&record, &table_name)?;
+        }
+
         Ok(())
     }
 
-    fn select(&self, query: Query) -> io::Result<()> {
+    fn save_record(&self, record: &DynamicRecord, filename: &str) -> std::io::Result<()> {
+        // TODO use data pages to handle this correctly
+        if !path::Path::new(filename).exists() {
+            fs::create_dir(filename)
+                .expect("\tFailed to create new data page when attempting to store data.");
+        }
+
+        let serialized = bincode::serialize(record).unwrap();
+
+        let mut file = fs::File::create(filename)?;
+        file.write_all(&serialized)?;
+
+        Ok(())
+    }
+
+    fn select(&self, table_name: String, column_names: Vec<String>) -> io::Result<()> {
         // retrieve data from file
         // fn load_record(filename: &str) -> io::Result<DynamicRecord> {
         //     let mut file = File::open(filename)?;

@@ -1,4 +1,6 @@
 allow insertion using the meta-data constraints
+    meta-data doesnt load properly, thats why insert doesnt work
+    check all open todos
 
 -   implement io engine
 -   indices

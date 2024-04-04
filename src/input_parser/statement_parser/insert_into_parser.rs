@@ -29,6 +29,7 @@ impl StatementParser for InsertIntoParser {
                 ParserState::Columns => column_names.push(grapheme),
                 ParserState::Values => {
                     if (grapheme == "(" || grapheme == ";") && !current_values.is_empty() {
+                        dbg!(&column_names, &current_values);
                         if current_values.len() != column_names.len() {
                             panic!("Invalid query. Your provided values must match the provided columns.")
                         }
