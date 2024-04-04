@@ -9,7 +9,7 @@ pub struct InsertIntoParser {
 impl StatementParser for InsertIntoParser {
     fn parse_statement(&mut self, graphemes: Vec<String>) -> Statement {
         let mut table_name = String::new();
-        let mut columns: Vec<String> = Vec::new();
+        let mut column_names: Vec<String> = Vec::new();
         let mut values: Vec<Vec<String>> = Vec::new();
         let mut current_values: Vec<String> = Vec::new();
 
@@ -26,9 +26,13 @@ impl StatementParser for InsertIntoParser {
 
             match self.state {
                 ParserState::TableName => table_name = grapheme,
-                ParserState::Columns => columns.push(grapheme),
+                ParserState::Columns => column_names.push(grapheme),
                 ParserState::Values => {
                     if (grapheme == "(" || grapheme == ";") && !current_values.is_empty() {
+                        if current_values.len() != column_names.len() {
+                            panic!("Invalid query. Your provided values must match the provided columns.")
+                        }
+
                         values.push(current_values);
                         current_values = Vec::new();
                     } else if grapheme != "(" {
@@ -40,7 +44,7 @@ impl StatementParser for InsertIntoParser {
 
         Statement::InsertInto {
             table_name,
-            columns,
+            column_names,
             values,
         }
     }
