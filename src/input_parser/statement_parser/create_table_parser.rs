@@ -23,7 +23,7 @@ impl StatementParser for CreateTableStatementParser {
 
             match self.state {
                 ParserState::TableName => {
-                    if grapheme != CREATE_TABLE_GRAPHEMS[0] && grapheme != CREATE_TABLE_GRAPHEMS[1]
+                    if grapheme.to_uppercase() != CREATE_TABLE_GRAPHEMS[0] && grapheme.to_uppercase() != CREATE_TABLE_GRAPHEMS[1]
                     {
                         table_name = grapheme.to_string();
                         self.state = ParserState::Columns

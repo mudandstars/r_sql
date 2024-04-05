@@ -1,8 +1,10 @@
-allow insertion using the meta-data constraints
-    meta-data doesnt load properly, thats why insert doesnt work
-    check all open todos
+- before insertion, check value satisfies column (type) constraints
+- use data pages to handle record saving and retrieving
+- enable select to correctly use the selected columns only
+    - how does this work under the hood? I don't want to read the entire file, do I?
 
--   implement io engine
+
+-   in progress: implement io engine
 -   indices
     -   B-Tree
     -   each leaf node points to a data page (fixed size 16kB used by InnoDB by mySQL)

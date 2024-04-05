@@ -18,6 +18,11 @@ pub struct BinaryEngine {
     base_path: String,
 }
 
+struct EngineResponse {
+    records: Option<Vec<DynamicRecord>>,
+    table: Option<metadata::Table>,
+}
+
 impl Engine for BinaryEngine {
     fn execute(&self, query: Query) {
         println!("\tWriting in binary..");
@@ -56,7 +61,11 @@ impl BinaryEngine {
         }
     }
 
-    fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> io::Result<()> {
+    fn create_table(
+        &self,
+        table_name: String,
+        columns: Vec<Vec<String>>,
+    ) -> io::Result<EngineResponse> {
         let table_path = String::from(&self.base_path) + "/" + &table_name;
 
         if !path::Path::new(&table_path).exists() {
@@ -69,7 +78,10 @@ impl BinaryEngine {
 
         fs::File::create(table_path + "/data_page_1.bin")?;
 
-        Ok(())
+        Ok(EngineResponse {
+            table: Some(table),
+            records: None,
+        })
     }
 
     fn store_meta_data(&self, table: &metadata::Table) -> io::Result<()> {
@@ -101,18 +113,12 @@ impl BinaryEngine {
         table_name: String,
         column_names: Vec<String>,
         values: Vec<Vec<String>>,
-    ) -> io::Result<()> {
+    ) -> io::Result<EngineResponse> {
         let metadata = self.load_meta_data(&table_name);
-        // TODO metadata does not load properly
 
         if metadata.is_err() {
             super::raise_error(format!("Table '{}' does not exist.", table_name).as_str())
         }
-
-        // for each value in values
-        // for each column_names
-        // if it is in metadata.column_names
-        // add it to the json and set the value to the value of the index
 
         let metadata_columns = metadata.unwrap().columns;
 
@@ -122,8 +128,6 @@ impl BinaryEngine {
             for (index, column_name) in column_names.iter().enumerate() {
                 for metadata_column in &metadata_columns {
                     if metadata_column.name == column_name.as_str() {
-                        //TODO implement check that column_names length must equal values length in respective parser
-                        //TODO imlement type checks
                         dynamic_data
                             .insert(column_name.to_string(), serde_json::json!(value_vec[index]));
                     }
@@ -136,34 +140,48 @@ impl BinaryEngine {
             self.save_record(&record, &table_name)?;
         }
 
-        Ok(())
+        Ok(EngineResponse {
+            table: None,
+            records: None,
+        })
     }
 
-    fn save_record(&self, record: &DynamicRecord, filename: &str) -> std::io::Result<()> {
-        // TODO use data pages to handle this correctly
-        if !path::Path::new(filename).exists() {
-            fs::create_dir(filename)
+    fn save_record(&self, record: &DynamicRecord, table_name: &str) -> std::io::Result<()> {
+        let file_path = format!("{}/{}/metadata.bin", self.base_path, table_name);
+        let file_path = file_path.as_str();
+        if !path::Path::new(file_path).exists() {
+            fs::create_dir(file_path)
                 .expect("\tFailed to create new data page when attempting to store data.");
         }
 
         let serialized = bincode::serialize(record).unwrap();
 
-        let mut file = fs::File::create(filename)?;
+        let mut file = fs::File::create(file_path)?;
         file.write_all(&serialized)?;
 
         Ok(())
     }
 
-    fn select(&self, table_name: String, column_names: Vec<String>) -> io::Result<()> {
-        // retrieve data from file
-        // fn load_record(filename: &str) -> io::Result<DynamicRecord> {
-        //     let mut file = File::open(filename)?;
-        //     let mut data = Vec::new();
-        //     file.read_to_end(&mut data)?;
-        //     let record: DynamicRecord = bincode::deserialize(&data[..]).unwrap();
-        //     Ok(record)
-        // }
-        Ok(())
+    fn select(&self, table_name: String, column_names: Vec<String>) -> io::Result<EngineResponse> {
+        let records = self.load_table_contents(&table_name)?;
+
+        Ok(EngineResponse {
+            records: Some(records),
+            table: None,
+        })
+    }
+
+    fn load_table_contents(&self, table_name: &str) -> io::Result<Vec<DynamicRecord>> {
+        let path = format!("{}/{}/data_page_1.bin", self.base_path, table_name);
+
+        let mut file = fs::File::open(path)?;
+
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+
+        let records: Vec<DynamicRecord> = bincode::deserialize(&buffer[..]).unwrap();
+
+        Ok(records)
     }
 }
 
@@ -172,5 +190,61 @@ impl Default for BinaryEngine {
         BinaryEngine {
             base_path: String::from("/Users/paul/r_sql/"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_can_write_metadata_to_disk() {
+        let engine = BinaryEngine::new();
+        let table_name = "test_table";
+
+        engine
+            .create_table(
+                table_name.to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        let table = engine.load_meta_data(table_name).unwrap();
+
+        assert_eq!(table.name, table_name);
+        assert_eq!(table.columns.first().unwrap().name, "name");
+        assert_eq!(table.columns.first().unwrap().data_type, "VARCHAR");
+        assert_eq!(table.columns.last().unwrap().name, "email");
+        assert_eq!(table.columns.last().unwrap().data_type, "VARCHAR");
+    }
+
+    #[test]
+    fn test_can_insert_into_table() {
+        let engine = BinaryEngine::new();
+        let table_name = "test_table";
+
+        engine
+            .create_table(
+                table_name.to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                table_name.to_string(),
+                vec!["name".to_string(), "email".to_string()],
+                vec![
+                    vec!["john".to_string(), "john@mail.com".to_string()],
+                    vec!["doe".to_string(), "doe@mail.com".to_string()],
+                ],
+            )
+            .unwrap();
     }
 }
