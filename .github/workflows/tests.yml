@@ -18,5 +18,7 @@ jobs:
                   profile: minimal
                   toolchain: stable
                   override: true
+            - name: Prepare .env
+              run: mkdir test_directory && echo "DATABASE_BASE_DIR=test_directory" > .env
             - name: Run cargo test
               run: cargo test
