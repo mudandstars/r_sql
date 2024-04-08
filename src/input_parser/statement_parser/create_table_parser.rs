@@ -23,7 +23,8 @@ impl StatementParser for CreateTableStatementParser {
 
             match self.state {
                 ParserState::TableName => {
-                    if grapheme.to_uppercase() != CREATE_TABLE_GRAPHEMS[0] && grapheme.to_uppercase() != CREATE_TABLE_GRAPHEMS[1]
+                    if grapheme.to_uppercase() != CREATE_TABLE_GRAPHEMS[0]
+                        && grapheme.to_uppercase() != CREATE_TABLE_GRAPHEMS[1]
                     {
                         table_name = grapheme.to_string();
                         self.state = ParserState::Columns
@@ -77,4 +78,39 @@ impl CreateTableStatementParser {
 enum ParserState {
     TableName,
     Columns,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::input_parser::InputParser;
+
+    #[test]
+    fn test_can_parse_a_create_table_statement() {
+        let input_parser = InputParser();
+        let query = input_parser.parse_query(String::from(
+            "CREATE TABLE users(
+                id PRIMARY KEY,
+                name VARCHAR,
+                email VARCHAR
+            );",
+        ));
+
+        assert_eq!(
+            query.statement.to_string(),
+            String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
+        );
+    }
+
+    #[test]
+    fn test_can_parse_a_create_table_statement_without_unnecessary_whitespace() {
+        let input_parser = InputParser();
+        let query = input_parser.parse_query(String::from(
+            "CREATE TABLE users(id PRIMARY KEY,name VARCHAR, email VARCHAR);",
+        ));
+
+        assert_eq!(
+            query.statement.to_string(),
+            String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
+        );
+    }
 }

@@ -1,3 +1,4 @@
+use super::sql_type::SqlType;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -13,7 +14,7 @@ impl Table {
         for column_vector in columns_vectors {
             columns.push(Column {
                 name: column_vector[0].clone(),
-                data_type: column_vector[1].clone(),
+                data_type: SqlType::from(column_vector[1].clone()),
                 nullable: false,
             })
         }
@@ -28,7 +29,7 @@ impl Table {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Column {
     pub name: String,
-    pub data_type: String,
+    pub data_type: SqlType,
     pub nullable: bool,
 }
 
@@ -47,9 +48,16 @@ mod tests {
         );
 
         assert_eq!(table.columns.first().unwrap().name, "name");
-        assert_eq!(table.columns.first().unwrap().data_type, "VARCHAR");
+        match table.columns.first().unwrap().data_type {
+            SqlType::Varchar => {}
+            _ => panic!("failed"),
+        }
 
         assert_eq!(table.columns.last().unwrap().name, "email");
-        assert_eq!(table.columns.last().unwrap().data_type, "VARCHAR");
+
+        match table.columns.last().unwrap().data_type {
+            SqlType::Varchar => {}
+            _ => panic!("failed"),
+        }
     }
 }

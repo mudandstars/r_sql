@@ -68,3 +68,32 @@ enum ParserState {
     TableName,
     Selection,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::input_parser::InputParser;
+
+    #[test]
+    fn test_can_create_a_parsed_input_from_a_simple_select_query() {
+        let input_parser = InputParser();
+        let query = input_parser.parse_query(String::from("SELECT * FROM users;"));
+
+        assert_eq!(
+            query.statement.to_string(),
+            String::from("SELECT * FROM users;")
+        );
+    }
+
+    #[test]
+    fn test_can_create_a_parsed_input_from_a_select_query_for_specific_columns() {
+        let input_parser = InputParser();
+        let query = input_parser.parse_query(String::from(
+            "SELECT id,foreign_id, number,name,job, another FROM users;",
+        ));
+
+        assert_eq!(
+            query.statement.to_string(),
+            String::from("SELECT id, foreign_id, number, name, job, another FROM users;")
+        );
+    }
+}

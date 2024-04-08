@@ -216,9 +216,15 @@ mod tests {
 
         assert_eq!(table.name, table_name);
         assert_eq!(table.columns.first().unwrap().name, "name");
-        assert_eq!(table.columns.first().unwrap().data_type, "VARCHAR");
+        match table.columns.first().unwrap().data_type {
+            metadata::SqlType::Varchar => {}
+            _ => panic!("failed"),
+        }
         assert_eq!(table.columns.last().unwrap().name, "email");
-        assert_eq!(table.columns.last().unwrap().data_type, "VARCHAR");
+        match table.columns.last().unwrap().data_type {
+            metadata::SqlType::Varchar => {}
+            _ => panic!("failed"),
+        }
     }
 
     #[test]

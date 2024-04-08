@@ -85,3 +85,32 @@ enum ParserState {
     Columns,
     Values,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::input_parser::InputParser;
+
+    #[test]
+    fn test_can_parse_an_insert_statement() {
+        let input_parser = InputParser();
+
+        let query = input_parser.parse_query(String::from(
+            "INSERT INTO users(name,email, number) VALUES ('felix', 'felix@gmail.de', 12345), ('paul', 'paul@mail.com', 67890);",
+        ));
+        assert_eq!(
+            query.statement.to_string(),
+            String::from("INSERT INTO users(\nname, email, number\n) VALUES (\n'felix', 'felix@gmail.de', 12345\n), (\n'paul', 'paul@mail.com', 67890\n);")
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_throws_for_insert_statement_where_some_values_tuple_length_does_not_match_columns_length(
+    ) {
+        let input_parser = InputParser();
+
+        input_parser.parse_query(String::from(
+            "INSERT INTO users(name,email, number) VALUES ('felix', 'felix@gmail.de', 12345), ('paul', 'paul@mail.com');",
+        ));
+    }
+}
