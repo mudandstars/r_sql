@@ -17,6 +17,15 @@ impl From<String> for SqlType {
     }
 }
 
+impl SqlType {
+    pub fn allows_value(&self, value: String) -> bool {
+        match self {
+            SqlType::Varchar => true,
+            SqlType::Integer => value.parse::<i64>().is_ok(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::SqlType;
@@ -41,5 +50,11 @@ mod tests {
             SqlType::Integer => {}
             _ => panic!("wrong type"),
         }
+    }
+
+    #[test]
+    fn test_does_not_allow_invalid_integer_values() {
+        assert!(!SqlType::Integer.allows_value("asdf".to_string()));
+        assert!(!SqlType::Integer.allows_value("another value".to_string()));
     }
 }

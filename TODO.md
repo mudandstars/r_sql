@@ -1,4 +1,3 @@
--   before insertion, check value satisfies column (type) constraints
 -   use data pages to handle record saving and retrieving
 -   enable select to correctly use the selected columns only
 

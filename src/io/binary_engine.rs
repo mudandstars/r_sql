@@ -103,9 +103,18 @@ impl BinaryEngine {
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)?;
 
-        let metadata: metadata::Table = bincode::deserialize(&buffer[..]).unwrap();
+        let result: bincode::Result<metadata::Table> = bincode::deserialize(&buffer[..]);
 
-        Ok(metadata)
+        match result {
+            Ok(table) => Ok(table),
+            Err(e) => {
+                println!("{}", e);
+                Err(io::Error::new(
+                    io::ErrorKind::Interrupted,
+                    "bincode serialization error",
+                ))
+            }
+        }
     }
 
     fn insert(
@@ -128,8 +137,19 @@ impl BinaryEngine {
             for (index, column_name) in column_names.iter().enumerate() {
                 for metadata_column in &metadata_columns {
                     if metadata_column.name == column_name.as_str() {
-                        dynamic_data
-                            .insert(column_name.to_string(), serde_json::json!(value_vec[index]));
+                        if metadata_column
+                            .data_type
+                            .allows_value(value_vec[index].clone())
+                        {
+                            dynamic_data.insert(
+                                column_name.to_string(),
+                                serde_json::json!(value_vec[index]),
+                            );
+                        } else {
+                            super::raise_error(
+                                format!("Type does not allow {} value", value_vec[index]).as_str(),
+                            )
+                        }
                     }
                 }
             }
@@ -200,7 +220,7 @@ mod tests {
     #[test]
     fn test_can_write_metadata_to_disk() {
         let engine = BinaryEngine::new();
-        let table_name = "test_table";
+        let table_name = "test_table1";
 
         engine
             .create_table(
@@ -230,7 +250,7 @@ mod tests {
     #[test]
     fn test_can_insert_into_table() {
         let engine = BinaryEngine::new();
-        let table_name = "test_table";
+        let table_name = "test_table2";
 
         engine
             .create_table(
@@ -250,6 +270,28 @@ mod tests {
                     vec!["john".to_string(), "john@mail.com".to_string()],
                     vec!["doe".to_string(), "doe@mail.com".to_string()],
                 ],
+            )
+            .unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_cannot_insert_invalid_type_into_table() {
+        let engine = BinaryEngine::new();
+        let table_name = "test_table3";
+
+        engine
+            .create_table(
+                table_name.to_string(),
+                vec![vec!["number".to_string(), "integer".to_string()]],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                table_name.to_string(),
+                vec!["number".to_string()],
+                vec![vec!["john".to_string()]],
             )
             .unwrap();
     }
