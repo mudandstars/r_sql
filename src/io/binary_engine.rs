@@ -183,7 +183,7 @@ impl BinaryEngine {
     }
 
     fn select(&self, table_name: String, column_names: Vec<String>) -> io::Result<EngineResponse> {
-        let records = self.load_table_contents(&table_name)?;
+        let records = self.load_table_contents(&table_name, column_names)?;
 
         Ok(EngineResponse {
             records: Some(records),
@@ -191,15 +191,35 @@ impl BinaryEngine {
         })
     }
 
-    fn load_table_contents(&self, table_name: &str) -> io::Result<Vec<DynamicRecord>> {
-        let path = format!("{}/{}/data_page_1.bin", self.base_path, table_name);
+    fn load_table_contents(
+        &self,
+        table_name: &str,
+        column_names: Vec<String>,
+    ) -> io::Result<Vec<DynamicRecord>> {
+        let mut data_page_index = 1;
+        let mut records: Vec<DynamicRecord> = vec![];
 
-        let mut file = fs::File::open(path)?;
+        loop {
+            let path = format!(
+                "{}/{}/data_page_{}.bin",
+                self.base_path, table_name, data_page_index
+            );
 
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
+            if !path::Path::new(&path).exists() {
+                break;
+            }
 
-        let records: Vec<DynamicRecord> = bincode::deserialize(&buffer[..]).unwrap();
+            let mut file = fs::File::open(path)?;
+
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer)?;
+
+            let current_data_page_records: Vec<DynamicRecord> =
+                bincode::deserialize(&buffer[..]).unwrap();
+            records.extend(current_data_page_records);
+
+            data_page_index += 1;
+        }
 
         Ok(records)
     }
