@@ -1,4 +1,5 @@
 mod binary_engine;
+mod dynamic_record;
 
 use crate::{io::binary_engine::BinaryEngine, query::Query};
 

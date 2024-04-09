@@ -1,25 +1,20 @@
+use super::dynamic_record;
 use super::Engine;
 use crate::metadata;
 use crate::query::{Query, Statement};
 use dotenvy::dotenv;
-use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections;
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct DynamicRecord {
-    data: serde_json::Value,
-}
+use std::path::Path;
 
 pub struct BinaryEngine {
     base_path: String,
 }
 
 struct EngineResponse {
-    records: Option<Vec<DynamicRecord>>,
+    records: Option<Vec<dynamic_record::DynamicRecord>>,
     table: Option<metadata::Table>,
 }
 
@@ -75,8 +70,6 @@ impl BinaryEngine {
         let table = metadata::Table::new(table_name.clone(), columns.clone());
         self.store_meta_data(&table)
             .expect("\tFailed to store meta-data.");
-
-        fs::File::create(table_path + "/data_page_1.bin")?;
 
         Ok(EngineResponse {
             table: Some(table),
@@ -143,7 +136,7 @@ impl BinaryEngine {
                         {
                             dynamic_data.insert(
                                 column_name.to_string(),
-                                serde_json::json!(value_vec[index]),
+                                dynamic_record::Value::Text(value_vec[index].clone()),
                             );
                         } else {
                             super::raise_error(
@@ -154,10 +147,9 @@ impl BinaryEngine {
                 }
             }
 
-            let data = serde_json::Value::Object(dynamic_data.into_iter().collect());
-            let record = DynamicRecord { data };
+            let record = dynamic_record::DynamicRecord::new(dynamic_data);
 
-            self.save_record(&record, &table_name)?;
+            self.save_record(record, &table_name)?;
         }
 
         Ok(EngineResponse {
@@ -166,17 +158,49 @@ impl BinaryEngine {
         })
     }
 
-    fn save_record(&self, record: &DynamicRecord, table_name: &str) -> std::io::Result<()> {
-        let file_path = format!("{}/{}/metadata.bin", self.base_path, table_name);
-        let file_path = file_path.as_str();
-        if !path::Path::new(file_path).exists() {
-            fs::create_dir(file_path)
-                .expect("\tFailed to create new data page when attempting to store data.");
+    fn save_record(
+        &self,
+        record: dynamic_record::DynamicRecord,
+        table_name: &str,
+    ) -> std::io::Result<()> {
+        let mut file_path;
+        let mut data_page_index: u32 = 1;
+
+        loop {
+            file_path = format!(
+                "{}/{}/data_page_{}.bin",
+                self.base_path, table_name, data_page_index
+            );
+
+            if !Path::new(&file_path).exists() {
+                break;
+            }
+
+            let path_size = fs::metadata(&file_path).unwrap().len();
+
+            if path_size < 16000 {
+                break;
+            }
+
+            data_page_index += 1;
         }
 
-        let serialized = bincode::serialize(record).unwrap();
+        let mut existing_contents: Vec<dynamic_record::DynamicRecord> = vec![];
+        if Path::new(&file_path).exists() {
+            existing_contents = self.load_records(file_path.as_str(), None).unwrap();
+        }
 
-        let mut file = fs::File::create(file_path)?;
+        existing_contents.push(record);
+
+        let serialized = bincode::serialize(&existing_contents).unwrap();
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(false)
+            .create(true)
+            .open(&file_path)
+            .unwrap();
+
         file.write_all(&serialized)?;
 
         Ok(())
@@ -195,9 +219,9 @@ impl BinaryEngine {
         &self,
         table_name: &str,
         column_names: Vec<String>,
-    ) -> io::Result<Vec<DynamicRecord>> {
+    ) -> io::Result<Vec<dynamic_record::DynamicRecord>> {
         let mut data_page_index = 1;
-        let mut records: Vec<DynamicRecord> = vec![];
+        let mut records: Vec<dynamic_record::DynamicRecord> = vec![];
 
         loop {
             let path = format!(
@@ -209,17 +233,45 @@ impl BinaryEngine {
                 break;
             }
 
-            let mut file = fs::File::open(path)?;
+            let mut file = fs::File::open(&path)?;
 
             let mut buffer = Vec::new();
             file.read_to_end(&mut buffer)?;
 
-            let current_data_page_records: Vec<DynamicRecord> =
-                bincode::deserialize(&buffer[..]).unwrap();
-            records.extend(current_data_page_records);
+            records.extend(self.load_records(&path, Some(&column_names)).unwrap());
 
             data_page_index += 1;
         }
+
+        Ok(records)
+    }
+
+    fn load_records(
+        &self,
+        path: &str,
+        selected_columns: Option<&Vec<String>>,
+    ) -> io::Result<Vec<dynamic_record::DynamicRecord>> {
+        let mut records: Vec<dynamic_record::DynamicRecord> = vec![];
+
+        let mut buffer = Vec::new();
+        let mut file = fs::File::open(path).unwrap();
+        file.read_to_end(&mut buffer)?;
+
+        match bincode::deserialize::<Vec<dynamic_record::DynamicRecord>>(&buffer[..]) {
+            Ok(mut current_data_page_records) => {
+                dbg!(&current_data_page_records);
+                if selected_columns.is_some() {
+                    for record in current_data_page_records.iter_mut() {
+                        record.filter_columns(selected_columns.unwrap());
+                    }
+                }
+
+                records.extend(current_data_page_records);
+            }
+            Err(e) => {
+                eprintln!("Error deserializing records: {:?}", e);
+            }
+        };
 
         Ok(records)
     }
@@ -240,7 +292,7 @@ mod tests {
     #[test]
     fn test_can_write_metadata_to_disk() {
         let engine = BinaryEngine::new();
-        let table_name = "test_table1";
+        let table_name = "test_can_write_metadata_to_disk";
 
         engine
             .create_table(
@@ -270,7 +322,7 @@ mod tests {
     #[test]
     fn test_can_insert_into_table() {
         let engine = BinaryEngine::new();
-        let table_name = "test_table2";
+        let table_name = "test_can_insert_into_table";
 
         engine
             .create_table(
@@ -298,7 +350,7 @@ mod tests {
     #[should_panic]
     fn test_cannot_insert_invalid_type_into_table() {
         let engine = BinaryEngine::new();
-        let table_name = "test_table3";
+        let table_name = "test_cannot_insert_invalid_type_into_table";
 
         engine
             .create_table(
@@ -314,5 +366,49 @@ mod tests {
                 vec![vec!["john".to_string()]],
             )
             .unwrap();
+    }
+
+    #[test]
+    fn test_can_select_from_table() {
+        let engine = BinaryEngine::new();
+        let table_name = "test_can_select_from_table";
+
+        let database_base_dir =
+            std::env::var("DATABASE_BASE_DIR").expect("DATABASE_BASE_DIR must be set");
+        fs::remove_file(format!(
+            "{}/{}/data_page_1.bin",
+            database_base_dir, table_name
+        ))
+        .unwrap();
+
+        engine
+            .create_table(
+                table_name.to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                table_name.to_string(),
+                vec!["name".to_string(), "email".to_string()],
+                vec![
+                    vec!["john".to_string(), "john@mail.com".to_string()],
+                    vec!["doe".to_string(), "doe@mail.com".to_string()],
+                ],
+            )
+            .unwrap();
+
+        let result = engine
+            .select(table_name.to_string(), vec![String::from("name")])
+            .unwrap();
+
+        let records = result.records.unwrap();
+        assert_eq!(records.len(), 2);
+        assert!(records.first().unwrap().fields.contains_key("name"));
+        assert!(!records.first().unwrap().fields.contains_key("email"));
     }
 }
