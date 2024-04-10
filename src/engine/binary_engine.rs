@@ -366,11 +366,12 @@ mod tests {
 
         let database_base_dir =
             std::env::var("DATABASE_BASE_DIR").expect("DATABASE_BASE_DIR must be set");
-        fs::remove_file(format!(
-            "{}/{}/data_page_1.bin",
-            database_base_dir, table_name
-        ))
-        .unwrap();
+
+        let data_page_path = format!("{}/{}/data_page_1.bin", database_base_dir, table_name);
+
+        if Path::new(&data_page_path).exists() {
+            fs::remove_file(data_page_path).unwrap();
+        }
 
         engine.create_table(
             table_name.to_string(),
