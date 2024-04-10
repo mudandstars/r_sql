@@ -82,11 +82,11 @@ enum ParserState {
 
 #[cfg(test)]
 mod tests {
-    use crate::input_parser::InputParser;
+    use crate::sql_parser::SqlParser;
 
     #[test]
     fn test_can_parse_a_create_table_statement() {
-        let input_parser = InputParser();
+        let input_parser = SqlParser();
         let query = input_parser.parse_query(String::from(
             "CREATE TABLE users(
                 id PRIMARY KEY,
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_can_parse_a_create_table_statement_without_unnecessary_whitespace() {
-        let input_parser = InputParser();
+        let input_parser = SqlParser();
         let query = input_parser.parse_query(String::from(
             "CREATE TABLE users(id PRIMARY KEY,name VARCHAR, email VARCHAR);",
         ));

@@ -1,18 +1,18 @@
-pub mod input_parser;
-pub mod io;
+pub mod engine;
 pub mod metadata;
 pub mod query;
+pub mod sql_parser;
 
 pub struct SQLEngine {
-    input_parser: input_parser::InputParser,
-    io_engine: Box<dyn io::Engine>,
+    input_parser: sql_parser::SqlParser,
+    io_engine: Box<dyn engine::Engine>,
 }
 
 impl SQLEngine {
-    pub fn new(io_type: io::Type) -> Self {
+    pub fn new(io_type: engine::Type) -> Self {
         SQLEngine {
-            input_parser: input_parser::InputParser(),
-            io_engine: io::io_engine_factory(io_type),
+            input_parser: sql_parser::SqlParser(),
+            io_engine: engine::io_engine_factory(io_type),
         }
     }
 
@@ -28,8 +28,8 @@ impl SQLEngine {
 impl Default for SQLEngine {
     fn default() -> Self {
         SQLEngine {
-            input_parser: input_parser::InputParser(),
-            io_engine: io::io_engine_factory(io::Type::Binary),
+            input_parser: sql_parser::SqlParser(),
+            io_engine: engine::io_engine_factory(engine::Type::Binary),
         }
     }
 }

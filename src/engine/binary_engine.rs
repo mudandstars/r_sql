@@ -1,4 +1,5 @@
 use super::dynamic_record;
+use super::engine_response::EngineResponse;
 use super::Engine;
 use crate::metadata;
 use crate::query::{Query, Statement};
@@ -13,16 +14,9 @@ pub struct BinaryEngine {
     base_path: String,
 }
 
-struct EngineResponse {
-    records: Option<Vec<dynamic_record::DynamicRecord>>,
-    table: Option<metadata::Table>,
-}
-
 impl Engine for BinaryEngine {
-    fn execute(&self, query: Query) {
-        println!("\tWriting in binary..");
-
-        let result = match query.statement {
+    fn execute(&self, query: Query) -> EngineResponse {
+        match query.statement {
             Statement::CreateTable {
                 table_name,
                 columns,
@@ -36,10 +30,6 @@ impl Engine for BinaryEngine {
                 column_names,
                 values,
             } => self.insert(table_name, column_names, values),
-        };
-
-        if result.is_err() {
-            super::raise_error("\tERROR: An error occured while trying to write..");
         }
     }
 }
@@ -56,11 +46,7 @@ impl BinaryEngine {
         }
     }
 
-    fn create_table(
-        &self,
-        table_name: String,
-        columns: Vec<Vec<String>>,
-    ) -> io::Result<EngineResponse> {
+    fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> EngineResponse {
         let table_path = String::from(&self.base_path) + "/" + &table_name;
 
         if !path::Path::new(&table_path).exists() {
@@ -71,10 +57,10 @@ impl BinaryEngine {
         self.store_meta_data(&table)
             .expect("\tFailed to store meta-data.");
 
-        Ok(EngineResponse {
+        EngineResponse::Success {
             table: Some(table),
             records: None,
-        })
+        }
     }
 
     fn store_meta_data(&self, table: &metadata::Table) -> io::Result<()> {
@@ -115,7 +101,7 @@ impl BinaryEngine {
         table_name: String,
         column_names: Vec<String>,
         values: Vec<Vec<String>>,
-    ) -> io::Result<EngineResponse> {
+    ) -> EngineResponse {
         let metadata = self.load_meta_data(&table_name);
 
         if metadata.is_err() {
@@ -149,13 +135,19 @@ impl BinaryEngine {
 
             let record = dynamic_record::DynamicRecord::new(dynamic_data);
 
-            self.save_record(record, &table_name)?;
+            let result = self.save_record(record, &table_name);
+
+            if let Err(err) = result {
+                return EngineResponse::Error {
+                    message: err.to_string(),
+                };
+            }
         }
 
-        Ok(EngineResponse {
+        EngineResponse::Success {
             table: None,
             records: None,
-        })
+        }
     }
 
     fn save_record(
@@ -206,13 +198,18 @@ impl BinaryEngine {
         Ok(())
     }
 
-    fn select(&self, table_name: String, column_names: Vec<String>) -> io::Result<EngineResponse> {
-        let records = self.load_table_contents(&table_name, column_names)?;
+    fn select(&self, table_name: String, column_names: Vec<String>) -> EngineResponse {
+        let records = self.load_table_contents(&table_name, column_names);
 
-        Ok(EngineResponse {
-            records: Some(records),
-            table: None,
-        })
+        match records {
+            Ok(records) => EngineResponse::Success {
+                records: Some(records),
+                table: None,
+            },
+            Err(e) => EngineResponse::Error {
+                message: e.to_string(),
+            },
+        }
     }
 
     fn load_table_contents(
@@ -294,15 +291,13 @@ mod tests {
         let engine = BinaryEngine::new();
         let table_name = "test_can_write_metadata_to_disk";
 
-        engine
-            .create_table(
-                table_name.to_string(),
-                vec![
-                    vec!["name".to_string(), "VARCHAR".to_string()],
-                    vec!["email".to_string(), "VARCHAR".to_string()],
-                ],
-            )
-            .unwrap();
+        engine.create_table(
+            table_name.to_string(),
+            vec![
+                vec!["name".to_string(), "VARCHAR".to_string()],
+                vec!["email".to_string(), "VARCHAR".to_string()],
+            ],
+        );
 
         let table = engine.load_meta_data(table_name).unwrap();
 
@@ -324,26 +319,22 @@ mod tests {
         let engine = BinaryEngine::new();
         let table_name = "test_can_insert_into_table";
 
-        engine
-            .create_table(
-                table_name.to_string(),
-                vec![
-                    vec!["name".to_string(), "VARCHAR".to_string()],
-                    vec!["email".to_string(), "VARCHAR".to_string()],
-                ],
-            )
-            .unwrap();
+        engine.create_table(
+            table_name.to_string(),
+            vec![
+                vec!["name".to_string(), "VARCHAR".to_string()],
+                vec!["email".to_string(), "VARCHAR".to_string()],
+            ],
+        );
 
-        engine
-            .insert(
-                table_name.to_string(),
-                vec!["name".to_string(), "email".to_string()],
-                vec![
-                    vec!["john".to_string(), "john@mail.com".to_string()],
-                    vec!["doe".to_string(), "doe@mail.com".to_string()],
-                ],
-            )
-            .unwrap();
+        engine.insert(
+            table_name.to_string(),
+            vec!["name".to_string(), "email".to_string()],
+            vec![
+                vec!["john".to_string(), "john@mail.com".to_string()],
+                vec!["doe".to_string(), "doe@mail.com".to_string()],
+            ],
+        );
     }
 
     #[test]
@@ -352,20 +343,16 @@ mod tests {
         let engine = BinaryEngine::new();
         let table_name = "test_cannot_insert_invalid_type_into_table";
 
-        engine
-            .create_table(
-                table_name.to_string(),
-                vec![vec!["number".to_string(), "integer".to_string()]],
-            )
-            .unwrap();
+        engine.create_table(
+            table_name.to_string(),
+            vec![vec!["number".to_string(), "integer".to_string()]],
+        );
 
-        engine
-            .insert(
-                table_name.to_string(),
-                vec!["number".to_string()],
-                vec![vec!["john".to_string()]],
-            )
-            .unwrap();
+        engine.insert(
+            table_name.to_string(),
+            vec!["number".to_string()],
+            vec![vec!["john".to_string()]],
+        );
     }
 
     #[test]
@@ -381,34 +368,33 @@ mod tests {
         ))
         .unwrap();
 
-        engine
-            .create_table(
-                table_name.to_string(),
-                vec![
-                    vec!["name".to_string(), "VARCHAR".to_string()],
-                    vec!["email".to_string(), "VARCHAR".to_string()],
-                ],
-            )
-            .unwrap();
+        engine.create_table(
+            table_name.to_string(),
+            vec![
+                vec!["name".to_string(), "VARCHAR".to_string()],
+                vec!["email".to_string(), "VARCHAR".to_string()],
+            ],
+        );
 
-        engine
-            .insert(
-                table_name.to_string(),
-                vec!["name".to_string(), "email".to_string()],
-                vec![
-                    vec!["john".to_string(), "john@mail.com".to_string()],
-                    vec!["doe".to_string(), "doe@mail.com".to_string()],
-                ],
-            )
-            .unwrap();
+        engine.insert(
+            table_name.to_string(),
+            vec!["name".to_string(), "email".to_string()],
+            vec![
+                vec!["john".to_string(), "john@mail.com".to_string()],
+                vec!["doe".to_string(), "doe@mail.com".to_string()],
+            ],
+        );
 
-        let result = engine
-            .select(table_name.to_string(), vec![String::from("name")])
-            .unwrap();
+        let result = engine.select(table_name.to_string(), vec![String::from("name")]);
 
-        let records = result.records.unwrap();
-        assert_eq!(records.len(), 2);
-        assert!(records.first().unwrap().fields.contains_key("name"));
-        assert!(!records.first().unwrap().fields.contains_key("email"));
+        match result {
+            EngineResponse::Success { records, .. } => {
+                let records = records.unwrap();
+                assert_eq!(records.len(), 2);
+                assert!(records.first().unwrap().fields.contains_key("name"));
+                assert!(!records.first().unwrap().fields.contains_key("email"));
+            }
+            EngineResponse::Error { message } => panic!("{}", message),
+        }
     }
 }

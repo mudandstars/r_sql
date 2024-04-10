@@ -71,11 +71,11 @@ enum ParserState {
 
 #[cfg(test)]
 mod tests {
-    use crate::input_parser::InputParser;
+    use crate::sql_parser::SqlParser;
 
     #[test]
     fn test_can_create_a_parsed_input_from_a_simple_select_query() {
-        let input_parser = InputParser();
+        let input_parser = SqlParser();
         let query = input_parser.parse_query(String::from("SELECT * FROM users;"));
 
         assert_eq!(
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_can_create_a_parsed_input_from_a_select_query_for_specific_columns() {
-        let input_parser = InputParser();
+        let input_parser = SqlParser();
         let query = input_parser.parse_query(String::from(
             "SELECT id,foreign_id, number,name,job, another FROM users;",
         ));

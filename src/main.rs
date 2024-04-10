@@ -1,4 +1,4 @@
-use r_sql::io;
+use r_sql::engine;
 use r_sql::SQLEngine;
 use std::env;
 use std::io::{stdin, stdout, Write};
@@ -6,7 +6,7 @@ use std::io::{stdin, stdout, Write};
 const QUIT_STRING: char = 'q';
 
 fn main() {
-    let engine = SQLEngine::new(io::Type::Binary);
+    let engine = SQLEngine::new(engine::Type::Binary);
 
     let mut args = env::args();
 

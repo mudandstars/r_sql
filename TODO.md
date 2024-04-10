@@ -1,7 +1,3 @@
--   use data pages to handle record saving and retrieving
--   enable select to correctly use the selected columns only
-
--   in progress: implement io engine
 -   indices
     -   B-Tree
     -   each leaf node points to a data page (fixed size 16kB used by InnoDB by mySQL)

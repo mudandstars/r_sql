@@ -11,7 +11,7 @@ impl DynamicRecord {
         DynamicRecord { fields }
     }
 
-    pub fn filter_columns(&mut self, column_names: &Vec<String>) {
+    pub fn filter_columns(&mut self, column_names: &[String]) {
         let filtered_map: HashMap<String, Value> = self
             .fields
             .iter()

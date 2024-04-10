@@ -4,9 +4,9 @@ use crate::query::StatementType;
 
 use super::statement_parser::statement_parser_factory;
 
-pub struct InputParser();
+pub struct SqlParser();
 
-impl InputParser {
+impl SqlParser {
     pub fn parse_query(&self, input: String) -> Query {
         let trimmed_input = input.trim();
         let raw_graphemes: Vec<&str> = trimmed_input.split(' ').collect();
@@ -40,11 +40,4 @@ impl InputParser {
 
         Query::new(input, statement_parser.parse_statement(graphemes))
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-
 }

@@ -88,11 +88,11 @@ enum ParserState {
 
 #[cfg(test)]
 mod tests {
-    use crate::input_parser::InputParser;
+    use crate::sql_parser::SqlParser;
 
     #[test]
     fn test_can_parse_an_insert_statement() {
-        let input_parser = InputParser();
+        let input_parser = SqlParser();
 
         let query = input_parser.parse_query(String::from(
             "INSERT INTO users(name,email, number) VALUES ('felix', 'felix@gmail.de', 12345), ('paul', 'paul@mail.com', 67890);",
@@ -107,7 +107,7 @@ mod tests {
     #[should_panic]
     fn test_throws_for_insert_statement_where_some_values_tuple_length_does_not_match_columns_length(
     ) {
-        let input_parser = InputParser();
+        let input_parser = SqlParser();
 
         input_parser.parse_query(String::from(
             "INSERT INTO users(name,email, number) VALUES ('felix', 'felix@gmail.de', 12345), ('paul', 'paul@mail.com');",

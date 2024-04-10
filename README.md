@@ -5,8 +5,7 @@
 ### What r_sql can do
 
 1. Parse simple queries (SELECT, INSERT INTO, CREATE TABLE)
-2. Handle the following with a binary engine:
-    1. Store table meta-data
+2. Handle simple reads/writes to binary format:
 
 ### What r_sql cannot (yet) do
 

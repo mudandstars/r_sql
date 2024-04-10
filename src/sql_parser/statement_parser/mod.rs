@@ -2,9 +2,9 @@ mod create_table_parser;
 mod insert_into_parser;
 mod select_parser;
 
-use crate::input_parser::statement_parser::create_table_parser::CreateTableStatementParser;
-use crate::input_parser::statement_parser::insert_into_parser::InsertIntoParser;
-use crate::input_parser::statement_parser::select_parser::SelectStatementParser;
+use crate::sql_parser::statement_parser::create_table_parser::CreateTableStatementParser;
+use crate::sql_parser::statement_parser::insert_into_parser::InsertIntoParser;
+use crate::sql_parser::statement_parser::select_parser::SelectStatementParser;
 
 use crate::query::{Statement, StatementType};
 
