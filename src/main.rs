@@ -42,6 +42,9 @@ fn run_engine_with_user_input(engine: SQLEngine) {
             break;
         }
 
-        engine.execute(query.clone());
+        match engine.execute(query.clone()) {
+            engine::EngineResponse::Success { .. } => println!("Success"),
+            engine::EngineResponse::Error { message } => println!("ERROR: {}", message),
+        }
     }
 }

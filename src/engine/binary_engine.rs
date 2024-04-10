@@ -105,7 +105,9 @@ impl BinaryEngine {
         let metadata = self.load_meta_data(&table_name);
 
         if metadata.is_err() {
-            super::raise_error(format!("Table '{}' does not exist.", table_name).as_str())
+            return EngineResponse::Error {
+                message: format!("Table '{}' does not exist.", table_name),
+            };
         }
 
         let metadata_columns = metadata.unwrap().columns;
@@ -125,9 +127,9 @@ impl BinaryEngine {
                                 dynamic_record::Value::Text(value_vec[index].clone()),
                             );
                         } else {
-                            super::raise_error(
-                                format!("Type does not allow {} value", value_vec[index]).as_str(),
-                            )
+                            return EngineResponse::Error {
+                                message: format!("Type does not allow {} value", value_vec[index]),
+                            };
                         }
                     }
                 }
@@ -338,7 +340,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_cannot_insert_invalid_type_into_table() {
         let engine = BinaryEngine::new();
         let table_name = "test_cannot_insert_invalid_type_into_table";
@@ -348,11 +349,14 @@ mod tests {
             vec![vec!["number".to_string(), "integer".to_string()]],
         );
 
-        engine.insert(
+        match engine.insert(
             table_name.to_string(),
             vec!["number".to_string()],
             vec![vec!["john".to_string()]],
-        );
+        ) {
+            EngineResponse::Success { .. } => panic!(),
+            EngineResponse::Error { .. } => {}
+        }
     }
 
     #[test]

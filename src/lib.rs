@@ -16,12 +16,12 @@ impl SQLEngine {
         }
     }
 
-    pub fn execute(&self, query: String) {
+    pub fn execute(&self, query: String) -> engine::EngineResponse {
         println!("\tExecuting query..");
 
         let query = self.input_parser.parse_query(query);
 
-        self.io_engine.execute(query);
+        self.io_engine.execute(query)
     }
 }
 
