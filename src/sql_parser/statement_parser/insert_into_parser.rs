@@ -1,4 +1,4 @@
-use crate::query::Statement;
+use crate::sql_parser::query::Statement;
 
 use super::StatementParser;
 
@@ -7,7 +7,7 @@ pub struct InsertIntoParser {
 }
 
 impl StatementParser for InsertIntoParser {
-    fn parse_statement(&mut self, graphemes: Vec<String>) -> Statement {
+    fn parse_statement(&mut self, graphemes: Vec<String>) -> super::StatementResult {
         let mut table_name = String::new();
         let mut column_names: Vec<String> = Vec::new();
         let mut values: Vec<Vec<String>> = Vec::new();
@@ -30,7 +30,7 @@ impl StatementParser for InsertIntoParser {
                 ParserState::Values => {
                     if (grapheme == "(" || grapheme == ";") && !current_values.is_empty() {
                         if current_values.len() != column_names.len() {
-                            panic!("Invalid query. Your provided values must match the provided columns.")
+                            return Err(String::from("Invalid query. Your provided values must match the provided columns."));
                         }
 
                         values.push(current_values);
@@ -42,11 +42,11 @@ impl StatementParser for InsertIntoParser {
             }
         }
 
-        Statement::InsertInto {
+        Ok(Statement::InsertInto {
             table_name,
             column_names,
             values,
-        }
+        })
     }
 }
 
@@ -98,19 +98,22 @@ mod tests {
             "INSERT INTO users(name,email, number) VALUES ('felix', 'felix@gmail.de', 12345), ('paul', 'paul@mail.com', 67890);",
         ));
         assert_eq!(
-            query.statement.to_string(),
+            query.unwrap().statement.to_string(),
             String::from("INSERT INTO users(\nname, email, number\n) VALUES (\n'felix', 'felix@gmail.de', 12345\n), (\n'paul', 'paul@mail.com', 67890\n);")
         );
     }
 
     #[test]
-    #[should_panic]
     fn test_throws_for_insert_statement_where_some_values_tuple_length_does_not_match_columns_length(
     ) {
         let input_parser = SqlParser();
 
-        input_parser.parse_query(String::from(
+        let parser_result = input_parser.parse_query(String::from(
             "INSERT INTO users(name,email, number) VALUES ('felix', 'felix@gmail.de', 12345), ('paul', 'paul@mail.com');",
         ));
+
+        if parser_result.is_ok() {
+            panic!()
+        }
     }
 }

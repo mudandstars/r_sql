@@ -6,10 +6,12 @@ use crate::sql_parser::statement_parser::create_table_parser::CreateTableStateme
 use crate::sql_parser::statement_parser::insert_into_parser::InsertIntoParser;
 use crate::sql_parser::statement_parser::select_parser::SelectStatementParser;
 
-use crate::query::{Statement, StatementType};
+use std::result;
+
+use super::query::{Statement, StatementType};
 
 pub trait StatementParser {
-    fn parse_statement(&mut self, graphemes: Vec<String>) -> Statement;
+    fn parse_statement(&mut self, graphemes: Vec<String>) -> StatementResult;
 }
 
 pub fn statement_parser_factory(statement_type: StatementType) -> Box<dyn StatementParser> {
@@ -20,3 +22,5 @@ pub fn statement_parser_factory(statement_type: StatementType) -> Box<dyn Statem
         _ => panic!("Not implemented yet."),
     }
 }
+
+type StatementResult = result::Result<Statement, String>;

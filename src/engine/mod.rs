@@ -3,7 +3,7 @@ mod dynamic_record;
 mod engine_response;
 
 pub use crate::engine::engine_response::EngineResponse;
-use crate::{engine::binary_engine::BinaryEngine, query::Query};
+use crate::{engine::binary_engine::BinaryEngine, sql_parser::query::Query};
 
 pub fn io_engine_factory(storage_type: self::Type) -> Box<dyn self::Engine> {
     match storage_type {

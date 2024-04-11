@@ -2,7 +2,7 @@ use super::dynamic_record;
 use super::engine_response::EngineResponse;
 use super::Engine;
 use crate::metadata;
-use crate::query::{Query, Statement};
+use crate::sql_parser::query::{Query, Statement};
 use dotenvy::dotenv;
 use std::collections;
 use std::fs::{self, OpenOptions};

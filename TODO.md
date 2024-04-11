@@ -1,3 +1,4 @@
+-   improve binary_engine tests by cleaning up correctly for them / thinking about a way to test them without interferences
 -   indices
     -   B-Tree
     -   each leaf node points to a data page (fixed size 16kB used by InnoDB by mySQL)
@@ -8,4 +9,4 @@
 
 -   limitations:
     -   I don't handle the case that a single record exceeds the size of a datapage
-    -   I don't implement DB metadata, such as users or privileges
+    -   I don't implement DB metadata like users or privileges

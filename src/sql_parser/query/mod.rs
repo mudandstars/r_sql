@@ -1,8 +1,8 @@
 mod statement;
 mod statement_type;
 
-pub use crate::query::statement::Statement;
-pub use crate::query::statement_type::StatementType;
+pub use crate::sql_parser::query::statement::Statement;
+pub use crate::sql_parser::query::statement_type::StatementType;
 
 pub struct Query {
     pub text: String,
@@ -14,3 +14,5 @@ impl Query {
         Query { text, statement }
     }
 }
+
+pub type QueryResult = std::result::Result<Query, String>;

@@ -1,13 +1,12 @@
-use crate::query::Query;
-
-use crate::query::StatementType;
-
-use super::statement_parser::statement_parser_factory;
+use super::{
+    query::{Query, QueryResult, StatementType},
+    statement_parser::statement_parser_factory,
+};
 
 pub struct SqlParser();
 
 impl SqlParser {
-    pub fn parse_query(&self, input: String) -> Query {
+    pub fn parse_query(&self, input: String) -> QueryResult {
         let trimmed_input = input.trim();
         let raw_graphemes: Vec<&str> = trimmed_input.split(' ').collect();
         let mut graphemes: Vec<String> = Vec::with_capacity(raw_graphemes.len());
@@ -29,15 +28,24 @@ impl SqlParser {
         }
 
         if graphemes.last().expect("Query is required.") != ";" {
-            panic!("Your statement must end with a semicolon.")
+            return Err(String::from("Your statement must end with a semicolon."));
         } else if graphemes.len() < 2 {
-            panic!("Invalid query.")
+            return Err(String::from("Invalid query."));
         }
 
         let statement_type = StatementType::new(&graphemes[0], &graphemes[1]);
 
+        if let StatementType::Invalid = statement_type {
+            return Err(String::from(
+                "Unimplemented Command. Please use 'SELECT', 'CREATE TABLE' or 'INSERT'",
+            ));
+        }
+
         let mut statement_parser = statement_parser_factory(statement_type);
 
-        Query::new(input, statement_parser.parse_statement(graphemes))
+        match statement_parser.parse_statement(graphemes) {
+            Ok(statement) => Ok(Query::new(input, statement)),
+            Err(message) => Err(message),
+        }
     }
 }

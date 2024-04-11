@@ -1,4 +1,4 @@
-use crate::query::Statement;
+use crate::sql_parser::query::Statement;
 
 use super::StatementParser;
 
@@ -9,7 +9,7 @@ pub struct CreateTableStatementParser {
 }
 
 impl StatementParser for CreateTableStatementParser {
-    fn parse_statement(&mut self, graphemes: Vec<String>) -> Statement {
+    fn parse_statement(&mut self, graphemes: Vec<String>) -> super::StatementResult {
         let mut table_name = String::new();
         let mut columns: Vec<Vec<String>> = Vec::new();
         let mut current_column: Vec<String> = Vec::new();
@@ -46,10 +46,10 @@ impl StatementParser for CreateTableStatementParser {
             }
         }
 
-        Statement::CreateTable {
+        Ok(Statement::CreateTable {
             table_name,
             columns,
-        }
+        })
     }
 }
 
@@ -96,7 +96,7 @@ mod tests {
         ));
 
         assert_eq!(
-            query.statement.to_string(),
+            query.unwrap().statement.to_string(),
             String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
         );
     }
@@ -109,7 +109,7 @@ mod tests {
         ));
 
         assert_eq!(
-            query.statement.to_string(),
+            query.unwrap().statement.to_string(),
             String::from("CREATE TABLE users(\nid PRIMARY KEY,\nname VARCHAR,\nemail VARCHAR\n);")
         );
     }

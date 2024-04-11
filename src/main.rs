@@ -22,7 +22,10 @@ fn run_engine_with_cli_arg(engine: SQLEngine, args: &mut std::env::Args) {
         .nth(1)
         .expect("Please specify one query wrapped in double quotes.");
 
-    engine.execute(query);
+    match engine.execute(query) {
+        engine::EngineResponse::Success { .. } => println!("Success"),
+        engine::EngineResponse::Error { message } => println!("ERROR: {}", message),
+    }
 }
 
 fn run_engine_with_user_input(engine: SQLEngine) {
@@ -33,16 +36,18 @@ fn run_engine_with_user_input(engine: SQLEngine) {
         print!("r_sql> ");
         stdout().flush().expect("Failed to flush stdout");
 
-        let mut query = String::new();
-        stdin().read_line(&mut query).expect("Failed to read line");
-        query = query.strip_suffix('\n').unwrap().to_string();
+        let mut user_query = String::new();
+        stdin()
+            .read_line(&mut user_query)
+            .expect("Failed to read line");
+        user_query = user_query.strip_suffix('\n').unwrap().to_string();
 
-        if query.len() == 1 && query.ends_with(QUIT_STRING) {
+        if user_query.len() == 1 && user_query.ends_with(QUIT_STRING) {
             println!("Quitting r_sql..");
             break;
         }
 
-        match engine.execute(query.clone()) {
+        match engine.execute(user_query.clone()) {
             engine::EngineResponse::Success { .. } => println!("Success"),
             engine::EngineResponse::Error { message } => println!("ERROR: {}", message),
         }

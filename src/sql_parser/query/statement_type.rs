@@ -15,11 +15,7 @@ impl StatementType {
 
             let statement_type = StatementType::from(first_two_words.as_str());
 
-            if statement_type.id() == StatementType::Invalid.id() {
-                panic!("Unimplemented Command. Please use 'SELECT', 'CREATE TABLE' or 'INSERT'");
-            } else {
-                statement_type
-            }
+            statement_type
         } else {
             statement_type
         }

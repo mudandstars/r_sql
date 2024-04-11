@@ -1,4 +1,4 @@
-use crate::query::Statement;
+use crate::sql_parser::query::Statement;
 
 use super::StatementParser;
 
@@ -10,7 +10,7 @@ pub struct SelectStatementParser {
 }
 
 impl StatementParser for SelectStatementParser {
-    fn parse_statement(&mut self, graphemes: Vec<String>) -> Statement {
+    fn parse_statement(&mut self, graphemes: Vec<String>) -> super::StatementResult {
         let mut selection: Vec<String> = Vec::new();
         let mut table_name = String::new();
 
@@ -35,10 +35,10 @@ impl StatementParser for SelectStatementParser {
             }
         }
 
-        Statement::Select {
+        Ok(Statement::Select {
             selection,
             table_name,
-        }
+        })
     }
 }
 
@@ -79,7 +79,7 @@ mod tests {
         let query = input_parser.parse_query(String::from("SELECT * FROM users;"));
 
         assert_eq!(
-            query.statement.to_string(),
+            query.unwrap().statement.to_string(),
             String::from("SELECT * FROM users;")
         );
     }
@@ -92,7 +92,7 @@ mod tests {
         ));
 
         assert_eq!(
-            query.statement.to_string(),
+            query.unwrap().statement.to_string(),
             String::from("SELECT id, foreign_id, number, name, job, another FROM users;")
         );
     }
