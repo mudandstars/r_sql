@@ -1,11 +1,11 @@
-# Custom SQL Interpreter
-### Reconstructing (something like) postgreSQL as a learning project in Rust
+# Custom SQL Interpreter & Engine
+### Reconstructing a relational database as a learning project in Rust
 
 
 ### What r_sql can do
 
 1. Parse simple queries (SELECT, INSERT INTO, CREATE TABLE)
-2. Handle simple reads/writes to binary format:
+2. Handle simple reads/writes
 
 ### What r_sql cannot (yet) do
 
