@@ -23,8 +23,8 @@ fn run_engine_with_cli_arg(engine: SQLEngine, args: &mut std::env::Args) {
         .expect("Please specify one query wrapped in double quotes.");
 
     match engine.execute(query) {
-        engine::EngineResponse::Success { .. } => println!("Success"),
-        engine::EngineResponse::Error { message } => println!("ERROR: {}", message),
+        Ok(..) => println!("Success"),
+        Err(message) => println!("ERROR: {}", message),
     }
 }
 
@@ -47,9 +47,9 @@ fn run_engine_with_user_input(engine: SQLEngine) {
             break;
         }
 
-        match engine.execute(user_query.clone()) {
-            engine::EngineResponse::Success { .. } => println!("Success"),
-            engine::EngineResponse::Error { message } => println!("ERROR: {}", message),
+        match engine.execute(user_query) {
+            Ok(..) => println!("Success"),
+            Err(message) => println!("ERROR: {}", message),
         }
     }
 }

@@ -1,5 +1,4 @@
 use super::dynamic_record;
-use super::engine_response::EngineResponse;
 use super::Engine;
 use crate::metadata;
 use crate::sql_parser::query::{Query, Statement};
@@ -15,7 +14,7 @@ pub struct BinaryEngine {
 }
 
 impl Engine for BinaryEngine {
-    fn execute(&self, query: Query) -> EngineResponse {
+    fn execute(&self, query: Query) -> super::EngineResult {
         match query.statement {
             Statement::CreateTable {
                 table_name,
@@ -46,7 +45,7 @@ impl BinaryEngine {
         }
     }
 
-    fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> EngineResponse {
+    fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> super::EngineResult {
         let table_path = String::from(&self.base_path) + "/" + &table_name;
 
         if !path::Path::new(&table_path).exists() {
@@ -57,10 +56,10 @@ impl BinaryEngine {
         self.store_meta_data(&table)
             .expect("\tFailed to store meta-data.");
 
-        EngineResponse::Success {
+        Ok(super::EngineResponse {
             table: Some(table),
             records: None,
-        }
+        })
     }
 
     fn store_meta_data(&self, table: &metadata::Table) -> io::Result<()> {
@@ -101,13 +100,11 @@ impl BinaryEngine {
         table_name: String,
         column_names: Vec<String>,
         values: Vec<Vec<String>>,
-    ) -> EngineResponse {
+    ) -> super::EngineResult {
         let metadata = self.load_meta_data(&table_name);
 
         if metadata.is_err() {
-            return EngineResponse::Error {
-                message: format!("Table '{}' does not exist.", table_name),
-            };
+            return Err(format!("Table '{}' does not exist.", table_name));
         }
 
         let metadata_columns = metadata.unwrap().columns;
@@ -127,9 +124,7 @@ impl BinaryEngine {
                                 dynamic_record::Value::Text(value_vec[index].clone()),
                             );
                         } else {
-                            return EngineResponse::Error {
-                                message: format!("Type does not allow {} value", value_vec[index]),
-                            };
+                            return Err(format!("Type does not allow {} value", value_vec[index]));
                         }
                     }
                 }
@@ -140,16 +135,14 @@ impl BinaryEngine {
             let result = self.save_record(record, &table_name);
 
             if let Err(err) = result {
-                return EngineResponse::Error {
-                    message: err.to_string(),
-                };
+                return Err(err.to_string());
             }
         }
 
-        EngineResponse::Success {
+        Ok(super::EngineResponse {
             table: None,
             records: None,
-        }
+        })
     }
 
     fn save_record(
@@ -200,17 +193,15 @@ impl BinaryEngine {
         Ok(())
     }
 
-    fn select(&self, table_name: String, column_names: Vec<String>) -> EngineResponse {
+    fn select(&self, table_name: String, column_names: Vec<String>) -> super::EngineResult {
         let records = self.load_table_contents(&table_name, column_names);
 
         match records {
-            Ok(records) => EngineResponse::Success {
+            Ok(records) => Ok(super::EngineResponse {
                 records: Some(records),
                 table: None,
-            },
-            Err(e) => EngineResponse::Error {
-                message: e.to_string(),
-            },
+            }),
+            Err(e) => Err(e.to_string()),
         }
     }
 
@@ -354,8 +345,8 @@ mod tests {
             vec!["number".to_string()],
             vec![vec!["john".to_string()]],
         ) {
-            EngineResponse::Success { .. } => panic!(),
-            EngineResponse::Error { .. } => {}
+            Ok(..) => panic!(),
+            Err(..) => {}
         }
     }
 
@@ -393,13 +384,13 @@ mod tests {
         let result = engine.select(table_name.to_string(), vec![String::from("name")]);
 
         match result {
-            EngineResponse::Success { records, .. } => {
-                let records = records.unwrap();
+            Ok(response) => {
+                let records = response.records.unwrap();
                 assert_eq!(records.len(), 2);
                 assert!(records.first().unwrap().fields.contains_key("name"));
                 assert!(!records.first().unwrap().fields.contains_key("email"));
             }
-            EngineResponse::Error { message } => panic!("{}", message),
+            Err(message) => panic!("{}", message),
         }
     }
 }
