@@ -33,6 +33,14 @@ impl Engine for BinaryEngine {
     }
 }
 
+impl Default for BinaryEngine {
+    fn default() -> Self {
+        BinaryEngine {
+            base_path: String::from("/Users/paul/r_sql/"),
+        }
+    }
+}
+
 impl BinaryEngine {
     pub fn new() -> Self {
         dotenv().ok();
@@ -267,34 +275,27 @@ impl BinaryEngine {
     }
 }
 
-impl Default for BinaryEngine {
-    fn default() -> Self {
-        BinaryEngine {
-            base_path: String::from("/Users/paul/r_sql/"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::io_test_context::FileTestContext;
 
     #[test]
     fn test_can_write_metadata_to_disk() {
+        let context = FileTestContext::new();
         let engine = BinaryEngine::new();
-        let table_name = "test_can_write_metadata_to_disk";
 
         engine.create_table(
-            table_name.to_string(),
+            context.table_name().to_string(),
             vec![
                 vec!["name".to_string(), "VARCHAR".to_string()],
                 vec!["email".to_string(), "VARCHAR".to_string()],
             ],
         );
 
-        let table = engine.load_meta_data(table_name).unwrap();
+        let table = engine.load_meta_data(context.table_name()).unwrap();
 
-        assert_eq!(table.name, table_name);
+        assert_eq!(table.name, context.table_name());
         assert_eq!(table.columns.first().unwrap().name, "name");
         match table.columns.first().unwrap().data_type {
             metadata::SqlType::Varchar => {}
@@ -309,11 +310,12 @@ mod tests {
 
     #[test]
     fn test_can_insert_into_table() {
+        let context = FileTestContext::new();
+
         let engine = BinaryEngine::new();
-        let table_name = "test_can_insert_into_table";
 
         engine.create_table(
-            table_name.to_string(),
+            context.table_name().to_string(),
             vec![
                 vec!["name".to_string(), "VARCHAR".to_string()],
                 vec!["email".to_string(), "VARCHAR".to_string()],
@@ -321,7 +323,7 @@ mod tests {
         );
 
         engine.insert(
-            table_name.to_string(),
+            context.table_name().to_string(),
             vec!["name".to_string(), "email".to_string()],
             vec![
                 vec!["john".to_string(), "john@mail.com".to_string()],
@@ -332,40 +334,47 @@ mod tests {
 
     #[test]
     fn test_cannot_insert_invalid_type_into_table() {
+        let context = FileTestContext::new();
+
         let engine = BinaryEngine::new();
-        let table_name = "test_cannot_insert_invalid_type_into_table";
 
         engine.create_table(
-            table_name.to_string(),
+            context.table_name().to_string(),
             vec![vec!["number".to_string(), "integer".to_string()]],
         );
 
-        match engine.insert(
-            table_name.to_string(),
-            vec!["number".to_string()],
-            vec![vec!["john".to_string()]],
-        ) {
-            Ok(..) => panic!(),
-            Err(..) => {}
+        if engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["number".to_string()],
+                vec![vec!["john".to_string()]],
+            )
+            .is_ok()
+        {
+            panic!()
         }
     }
 
     #[test]
     fn test_can_select_from_table() {
+        let context = FileTestContext::new();
         let engine = BinaryEngine::new();
-        let table_name = "test_can_select_from_table";
 
         let database_base_dir =
             std::env::var("DATABASE_BASE_DIR").expect("DATABASE_BASE_DIR must be set");
 
-        let data_page_path = format!("{}/{}/data_page_1.bin", database_base_dir, table_name);
+        let data_page_path = format!(
+            "{}/{}/data_page_1.bin",
+            database_base_dir,
+            context.table_name()
+        );
 
         if Path::new(&data_page_path).exists() {
             fs::remove_file(data_page_path).unwrap();
         }
 
         engine.create_table(
-            table_name.to_string(),
+            context.table_name().to_string(),
             vec![
                 vec!["name".to_string(), "VARCHAR".to_string()],
                 vec!["email".to_string(), "VARCHAR".to_string()],
@@ -373,7 +382,7 @@ mod tests {
         );
 
         engine.insert(
-            table_name.to_string(),
+            context.table_name().to_string(),
             vec!["name".to_string(), "email".to_string()],
             vec![
                 vec!["john".to_string(), "john@mail.com".to_string()],
@@ -381,7 +390,7 @@ mod tests {
             ],
         );
 
-        let result = engine.select(table_name.to_string(), vec![String::from("name")]);
+        let result = engine.select(context.table_name().to_string(), vec![String::from("name")]);
 
         match result {
             Ok(response) => {
