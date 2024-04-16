@@ -185,7 +185,7 @@ impl BinaryEngine {
     fn select(&self, table_name: String, column_names: Vec<String>) -> super::EngineResult {
         let table = self.load_meta_data(&table_name);
         if table.is_err() {
-            return Err(table.err().unwrap().to_string());
+            return Err(String::from("This table does not exist."));
         }
 
         if !self.all_column_names_exist_on_table(table.unwrap(), column_names.clone()) {
