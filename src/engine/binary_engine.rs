@@ -1,9 +1,8 @@
 use super::dynamic_record;
 use super::file_paths::FilePaths;
 use super::Engine;
-use crate::metadata;
+use crate::metadata::{self, Table};
 use crate::sql_parser::query::{Query, Statement};
-use dotenvy::dotenv;
 use std::collections;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
@@ -184,6 +183,17 @@ impl BinaryEngine {
     }
 
     fn select(&self, table_name: String, column_names: Vec<String>) -> super::EngineResult {
+        let table = self.load_meta_data(&table_name);
+        if table.is_err() {
+            return Err(table.err().unwrap().to_string());
+        }
+
+        if !self.all_column_names_exist_on_table(table.unwrap(), column_names.clone()) {
+            return Err(String::from(
+                "Please choose only columns that exist on this table.",
+            ));
+        }
+
         let records = self.load_table_contents(&table_name, column_names);
 
         match records {
@@ -193,6 +203,17 @@ impl BinaryEngine {
             }),
             Err(e) => Err(e.to_string()),
         }
+    }
+
+    fn all_column_names_exist_on_table(&self, table: Table, column_names: Vec<String>) -> bool {
+        let actual_table_columns: Vec<String> =
+            table.columns.into_iter().map(|val| val.name).collect();
+
+        let all_included = column_names
+            .iter()
+            .all(|item| actual_table_columns.contains(item));
+
+        return all_included;
     }
 
     fn load_table_contents(
@@ -339,19 +360,6 @@ mod tests {
         let context = FileTestContext::new();
         let engine = BinaryEngine::new();
 
-        let database_base_dir =
-            std::env::var("DATABASE_BASE_DIR").expect("DATABASE_BASE_DIR must be set");
-
-        let data_page_path = format!(
-            "{}/{}/data_page_1.bin",
-            database_base_dir,
-            context.table_name()
-        );
-
-        if Path::new(&data_page_path).exists() {
-            fs::remove_file(data_page_path).unwrap();
-        }
-
         engine.create_table(
             context.table_name().to_string(),
             vec![
@@ -379,6 +387,46 @@ mod tests {
                 assert!(!records.first().unwrap().fields.contains_key("email"));
             }
             Err(message) => panic!("{}", message),
+        }
+    }
+
+    #[test]
+    fn test_cannot_select_from_table_that_does_not_exist() {
+        let engine = BinaryEngine::new();
+
+        let result = engine.select(
+            String::from("non_existant_table"),
+            vec![String::from("name")],
+        );
+
+        if result.is_ok() {
+            panic!()
+        }
+    }
+
+    #[test]
+    fn test_cannot_select_columns_from_table_that_do_not_exist() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine.create_table(
+            context.table_name().to_string(),
+            vec![vec!["name".to_string(), "VARCHAR".to_string()]],
+        );
+
+        engine.insert(
+            context.table_name().to_string(),
+            vec!["name".to_string()],
+            vec![vec!["john".to_string()], vec!["doe".to_string()]],
+        );
+
+        let result = engine.select(
+            context.table_name().to_string(),
+            vec![String::from("email")],
+        );
+
+        if result.is_ok() {
+            panic!()
         }
     }
 }
