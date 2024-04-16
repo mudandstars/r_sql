@@ -1,4 +1,3 @@
--   improve binary_engine tests by cleaning up correctly for them / thinking about a way to test them without interferences
 -   indices
     -   B-Tree
     -   each leaf node points to a data page (fixed size 16kB used by InnoDB by mySQL)

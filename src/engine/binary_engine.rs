@@ -1,4 +1,5 @@
 use super::dynamic_record;
+use super::file_paths::FilePaths;
 use super::Engine;
 use crate::metadata;
 use crate::sql_parser::query::{Query, Statement};
@@ -10,7 +11,7 @@ use std::path;
 use std::path::Path;
 
 pub struct BinaryEngine {
-    base_path: String,
+    file_paths: FilePaths,
 }
 
 impl Engine for BinaryEngine {
@@ -33,34 +34,22 @@ impl Engine for BinaryEngine {
     }
 }
 
-impl Default for BinaryEngine {
-    fn default() -> Self {
-        BinaryEngine {
-            base_path: String::from("/Users/paul/r_sql/"),
-        }
-    }
-}
-
 impl BinaryEngine {
     pub fn new() -> Self {
-        dotenv().ok();
+        let file_paths = FilePaths::new();
 
-        let database_base_dir =
-            std::env::var("DATABASE_BASE_DIR").expect("DATABASE_BASE_DIR must be set");
-
-        BinaryEngine {
-            base_path: database_base_dir,
-        }
+        BinaryEngine { file_paths }
     }
 
     fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> super::EngineResult {
-        let table_path = String::from(&self.base_path) + "/" + &table_name;
+        let table_path = self.file_paths.table_path(&table_name);
 
         if !path::Path::new(&table_path).exists() {
             fs::create_dir(table_path.clone()).expect("\tFailed to create dir for new table.");
         }
 
-        let table = metadata::Table::new(table_name.clone(), columns.clone());
+        let table = metadata::Table::new(table_name, columns);
+
         self.store_meta_data(&table)
             .expect("\tFailed to store meta-data.");
 
@@ -71,20 +60,16 @@ impl BinaryEngine {
     }
 
     fn store_meta_data(&self, table: &metadata::Table) -> io::Result<()> {
-        let path = format!("{}/{}/metadata.bin", self.base_path, table.name);
-
         let serialized_table = &bincode::serialize(table).unwrap();
 
-        let mut file = fs::File::create(path)?;
+        let mut file = fs::File::create(self.file_paths.meta_data_path(&table.name))?;
         file.write_all(serialized_table)?;
 
         Ok(())
     }
 
     fn load_meta_data(&self, table_name: &str) -> io::Result<metadata::Table> {
-        let path = format!("{}/{}/metadata.bin", self.base_path, table_name);
-
-        let mut file = fs::File::open(path)?;
+        let mut file = fs::File::open(self.file_paths.meta_data_path(table_name))?;
 
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)?;
@@ -162,10 +147,7 @@ impl BinaryEngine {
         let mut data_page_index: u32 = 1;
 
         loop {
-            file_path = format!(
-                "{}/{}/data_page_{}.bin",
-                self.base_path, table_name, data_page_index
-            );
+            file_path = self.file_paths.data_page(table_name, data_page_index);
 
             if !Path::new(&file_path).exists() {
                 break;
@@ -222,10 +204,7 @@ impl BinaryEngine {
         let mut records: Vec<dynamic_record::DynamicRecord> = vec![];
 
         loop {
-            let path = format!(
-                "{}/{}/data_page_{}.bin",
-                self.base_path, table_name, data_page_index
-            );
+            let path = self.file_paths.data_page(table_name, data_page_index);
 
             if !path::Path::new(&path).exists() {
                 break;

@@ -1,5 +1,6 @@
 mod binary_engine;
 mod dynamic_record;
+mod file_paths;
 
 use crate::metadata;
 use crate::{engine::binary_engine::BinaryEngine, sql_parser::query::Query};
