@@ -213,7 +213,7 @@ impl BinaryEngine {
             .iter()
             .all(|item| actual_table_columns.contains(item));
 
-        return all_included;
+        all_included
     }
 
     fn load_table_contents(
@@ -281,19 +281,28 @@ mod tests {
     use crate::io_test_context::FileTestContext;
 
     #[test]
-    fn test_can_write_metadata_to_disk() {
+    fn test_can_create_a_table_and_write_metadata_to_disk_correctly() {
         let context = FileTestContext::new();
         let engine = BinaryEngine::new();
 
-        engine.create_table(
-            context.table_name().to_string(),
-            vec![
-                vec!["name".to_string(), "VARCHAR".to_string()],
-                vec!["email".to_string(), "VARCHAR".to_string()],
-            ],
-        );
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["unique_id".to_string(), "PRIMARY KEY".to_string()],
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
 
         let table = engine.load_meta_data(context.table_name()).unwrap();
+        assert_eq!(table.primary_key.name, "unique_id");
+        match table.primary_key.data_type {
+            metadata::SqlType::Integer => {}
+            _ => panic!("failed"),
+        }
+        assert!(!table.primary_key.nullable);
 
         assert_eq!(table.name, context.table_name());
         assert_eq!(table.columns.first().unwrap().name, "name");
@@ -309,27 +318,53 @@ mod tests {
     }
 
     #[test]
+    fn test_creates_a_primary_key_id_if_none_given() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![vec!["name".to_string(), "VARCHAR".to_string()]],
+            )
+            .unwrap();
+
+        let table = engine.load_meta_data(context.table_name()).unwrap();
+
+        assert_eq!(table.primary_key.name, "id");
+        match table.primary_key.data_type {
+            metadata::SqlType::Integer => {}
+            _ => panic!("failed"),
+        }
+        assert!(!table.primary_key.nullable);
+    }
+
+    #[test]
     fn test_can_insert_into_table() {
         let context = FileTestContext::new();
 
         let engine = BinaryEngine::new();
 
-        engine.create_table(
-            context.table_name().to_string(),
-            vec![
-                vec!["name".to_string(), "VARCHAR".to_string()],
-                vec!["email".to_string(), "VARCHAR".to_string()],
-            ],
-        );
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
 
-        engine.insert(
-            context.table_name().to_string(),
-            vec!["name".to_string(), "email".to_string()],
-            vec![
-                vec!["john".to_string(), "john@mail.com".to_string()],
-                vec!["doe".to_string(), "doe@mail.com".to_string()],
-            ],
-        );
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string(), "email".to_string()],
+                vec![
+                    vec!["john".to_string(), "john@mail.com".to_string()],
+                    vec!["doe".to_string(), "doe@mail.com".to_string()],
+                ],
+            )
+            .unwrap();
     }
 
     #[test]
@@ -338,10 +373,12 @@ mod tests {
 
         let engine = BinaryEngine::new();
 
-        engine.create_table(
-            context.table_name().to_string(),
-            vec![vec!["number".to_string(), "integer".to_string()]],
-        );
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![vec!["number".to_string(), "integer".to_string()]],
+            )
+            .unwrap();
 
         if engine
             .insert(
@@ -360,22 +397,26 @@ mod tests {
         let context = FileTestContext::new();
         let engine = BinaryEngine::new();
 
-        engine.create_table(
-            context.table_name().to_string(),
-            vec![
-                vec!["name".to_string(), "VARCHAR".to_string()],
-                vec!["email".to_string(), "VARCHAR".to_string()],
-            ],
-        );
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
 
-        engine.insert(
-            context.table_name().to_string(),
-            vec!["name".to_string(), "email".to_string()],
-            vec![
-                vec!["john".to_string(), "john@mail.com".to_string()],
-                vec!["doe".to_string(), "doe@mail.com".to_string()],
-            ],
-        );
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string(), "email".to_string()],
+                vec![
+                    vec!["john".to_string(), "john@mail.com".to_string()],
+                    vec!["doe".to_string(), "doe@mail.com".to_string()],
+                ],
+            )
+            .unwrap();
 
         let result = engine.select(context.table_name().to_string(), vec![String::from("name")]);
 
@@ -409,16 +450,20 @@ mod tests {
         let context = FileTestContext::new();
         let engine = BinaryEngine::new();
 
-        engine.create_table(
-            context.table_name().to_string(),
-            vec![vec!["name".to_string(), "VARCHAR".to_string()]],
-        );
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![vec!["name".to_string(), "VARCHAR".to_string()]],
+            )
+            .unwrap();
 
-        engine.insert(
-            context.table_name().to_string(),
-            vec!["name".to_string()],
-            vec![vec!["john".to_string()], vec!["doe".to_string()]],
-        );
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string()],
+                vec![vec!["john".to_string()], vec!["doe".to_string()]],
+            )
+            .unwrap();
 
         let result = engine.select(
             context.table_name().to_string(),
