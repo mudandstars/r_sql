@@ -64,6 +64,10 @@ impl BinaryEngine {
         let mut file = fs::File::create(self.file_paths.meta_data_path(&table.name))?;
         file.write_all(serialized_table)?;
 
+        for index in &table.indices {
+            fs::File::create(self.file_paths.index_path(&table.name, &index.name))?;
+        }
+
         Ok(())
     }
 
@@ -337,6 +341,24 @@ mod tests {
             _ => panic!("failed"),
         }
         assert!(!table.primary_key.nullable);
+    }
+
+    #[test]
+    fn test_creates_an_index_on_the_primary_key() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![vec!["name".to_string(), "VARCHAR".to_string()]],
+            )
+            .unwrap();
+
+        let table = engine.load_meta_data(context.table_name()).unwrap();
+
+        assert_eq!(table.indices.len(), 1);
+        assert_eq!(table.indices.first().unwrap().column_name, "id");
     }
 
     #[test]

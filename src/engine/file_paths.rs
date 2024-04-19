@@ -21,6 +21,10 @@ impl FilePaths {
         format!("{}/{}/metadata.bin", self.base_path, table_name)
     }
 
+    pub fn index_path(&self, table_name: &str, index_name: &str) -> String {
+        format!("{}/{}/{}.bin", self.base_path, table_name, index_name)
+    }
+
     pub fn data_page(&self, table_name: &str, data_page_index: u32) -> String {
         format!(
             "{}/{}/data_page_{}.bin",
