@@ -1,6 +1,5 @@
 -   indices
     - NOW:
-        - update index file on insert
         - use index file on select
     -   B-Tree
     -   each leaf node points to a data page (fixed size 16kB used by InnoDB by mySQL)
