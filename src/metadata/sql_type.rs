@@ -1,7 +1,7 @@
 pub const VARCHAR: &str = "VARCHAR";
 pub const INTEGER: &str = "INTEGER";
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub enum SqlType {
     Varchar,
     Integer,

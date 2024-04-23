@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Table {
     pub name: String,
     pub primary_key: super::Column,
+    latest_primary_key: usize,
     pub columns: Vec<super::Column>,
     pub indices: Vec<super::Index>,
 }
@@ -36,7 +37,16 @@ impl Table {
             columns,
             indices: vec![super::Index::new(&primary_key.name)],
             primary_key,
+            latest_primary_key: 0,
         }
+    }
+
+    pub fn new_primary_key(&mut self) -> usize {
+        let new_key = self.latest_primary_key + 1;
+
+        self.latest_primary_key = new_key;
+
+        new_key
     }
 }
 

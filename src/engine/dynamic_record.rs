@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DynamicRecord {
     pub fields: HashMap<String, Value>,
 }

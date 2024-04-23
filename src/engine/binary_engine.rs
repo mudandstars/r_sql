@@ -103,13 +103,13 @@ impl BinaryEngine {
             return Err(format!("Table '{}' does not exist.", table_name));
         }
 
-        let metadata_columns = metadata.unwrap().columns;
+        let mut metadata = metadata.unwrap();
 
         for value_vec in values {
             let mut dynamic_data = collections::HashMap::new();
 
             for (index, column_name) in column_names.iter().enumerate() {
-                for metadata_column in &metadata_columns {
+                for metadata_column in &metadata.columns {
                     if metadata_column.name == column_name.as_str() {
                         if metadata_column
                             .data_type
@@ -126,14 +126,34 @@ impl BinaryEngine {
                 }
             }
 
+            if !dynamic_data.contains_key(&metadata.primary_key.name) {
+                dynamic_data.insert(
+                    metadata.primary_key.clone().name,
+                    dynamic_record::Value::Text(metadata.new_primary_key().to_string()),
+                );
+            }
+
             let record = dynamic_record::DynamicRecord::new(dynamic_data);
 
-            let result = self.save_record(record, &table_name);
+            let result = self.save_record(record.clone(), &table_name);
 
-            if let Err(err) = result {
+            if let Err(err) = &result {
                 return Err(err.to_string());
             }
+
+            for index in metadata.indices.iter_mut() {
+                index.update_tree((
+                    record
+                        .fields
+                        .get(index.column_name.as_str())
+                        .unwrap()
+                        .to_string(),
+                    result.as_ref().unwrap().clone(),
+                ));
+            }
         }
+
+        self.store_meta_data(&metadata).unwrap();
 
         Ok(super::EngineResponse {
             table: None,
@@ -145,9 +165,9 @@ impl BinaryEngine {
         &self,
         record: dynamic_record::DynamicRecord,
         table_name: &str,
-    ) -> std::io::Result<()> {
+    ) -> std::io::Result<usize> {
         let mut file_path;
-        let mut data_page_index: u32 = 1;
+        let mut data_page_index: usize = 1;
 
         loop {
             file_path = self.file_paths.data_page(table_name, data_page_index);
@@ -183,7 +203,7 @@ impl BinaryEngine {
 
         file.write_all(&serialized)?;
 
-        Ok(())
+        Ok(data_page_index)
     }
 
     fn select(&self, table_name: String, column_names: Vec<String>) -> super::EngineResult {
@@ -261,7 +281,6 @@ impl BinaryEngine {
 
         match bincode::deserialize::<Vec<dynamic_record::DynamicRecord>>(&buffer[..]) {
             Ok(mut current_data_page_records) => {
-                dbg!(&current_data_page_records);
                 if selected_columns.is_some() {
                     for record in current_data_page_records.iter_mut() {
                         record.filter_columns(selected_columns.unwrap());
@@ -341,6 +360,34 @@ mod tests {
             _ => panic!("failed"),
         }
         assert!(!table.primary_key.nullable);
+    }
+
+    #[test]
+    fn test_updates_primary_key_index_on_inserts() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![vec!["name".to_string(), "VARCHAR".to_string()]],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string(), "email".to_string()],
+                vec![
+                    vec!["john".to_string(), "john@mail.com".to_string()],
+                    vec!["doe".to_string(), "doe@mail.com".to_string()],
+                ],
+            )
+            .unwrap();
+
+        let table = engine.load_meta_data(context.table_name()).unwrap();
+
+        assert!(table.indices.first().unwrap().data_page("2").is_ok());
     }
 
     #[test]
