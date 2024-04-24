@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use crate::sql_parser::query::Statement;
 
 use super::StatementParser;
 
 const SELECT_GRAPHEME: &str = "SELECT";
 const FROM_GRAPHEME: &str = "FROM";
+const WHERE_GRAPHEME: &str = "WHERE";
 
 pub struct SelectStatementParser {
     state: ParserState,
@@ -13,6 +16,8 @@ impl StatementParser for SelectStatementParser {
     fn parse_statement(&mut self, graphemes: Vec<String>) -> super::StatementResult {
         let mut selection: Vec<String> = Vec::new();
         let mut table_name = String::new();
+        let mut last_where_attribute = String::new();
+        let mut where_clauses: HashMap<String, String> = HashMap::new();
 
         for grapheme in graphemes {
             let changed_parser_state = self.change_parser_state(&grapheme);
@@ -32,12 +37,23 @@ impl StatementParser for SelectStatementParser {
                         table_name = grapheme;
                     }
                 }
+                ParserState::WhereClauses => {
+                    if grapheme != "=" && grapheme != "AND" {
+                        if last_where_attribute.is_empty() {
+                            last_where_attribute = grapheme;
+                        } else {
+                            where_clauses.insert(last_where_attribute.to_string(), grapheme);
+                            last_where_attribute = String::new();
+                        }
+                    }
+                }
             }
         }
 
         Ok(Statement::Select {
             selection,
             table_name,
+            where_clauses,
         })
     }
 }
@@ -59,7 +75,15 @@ impl SelectStatementParser {
                     false
                 }
             }
-            ParserState::TableName => false,
+            ParserState::TableName => {
+                if grapheme.to_uppercase() == WHERE_GRAPHEME {
+                    self.state = ParserState::WhereClauses;
+                    true
+                } else {
+                    false
+                }
+            }
+            ParserState::WhereClauses => false,
         }
     }
 }
@@ -67,11 +91,12 @@ impl SelectStatementParser {
 enum ParserState {
     TableName,
     Selection,
+    WhereClauses,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::sql_parser::SqlParser;
+    use crate::sql_parser::{query::Statement, SqlParser};
 
     #[test]
     fn test_can_create_a_parsed_input_from_a_simple_select_query() {
@@ -95,5 +120,18 @@ mod tests {
             query.unwrap().statement.to_string(),
             String::from("SELECT id, foreign_id, number, name, job, another FROM users;")
         );
+    }
+
+    #[test]
+    fn test_can_create_a_parsed_input_from_a_select_query_with_a_where_statement() {
+        let input_parser = SqlParser();
+        let query = input_parser.parse_query(String::from("SELECT * FROM users WHERE id = 5;"));
+
+        match query.unwrap().statement {
+            Statement::Select { where_clauses, .. } => {
+                assert_eq!(where_clauses.get("id").unwrap(), "5")
+            }
+            _ => panic!(),
+        }
     }
 }

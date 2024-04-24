@@ -1,8 +1,6 @@
 -   indices
     - NOW:
         - use index file on select
-    -   B-Tree
-    -   each leaf node points to a data page (fixed size 16kB used by InnoDB by mySQL)
 -   basic constraints
 -   implement DROP and UPDATE and DELETE and WHERE and AND
 -   implement WAL

@@ -23,6 +23,7 @@ impl Engine for BinaryEngine {
             Statement::Select {
                 table_name,
                 selection,
+                where_clauses,
             } => self.select(table_name, selection),
             Statement::InsertInto {
                 table_name,

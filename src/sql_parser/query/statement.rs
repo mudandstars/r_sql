@@ -1,9 +1,12 @@
 use core::fmt;
+use std::collections::HashMap;
+
 
 pub enum Statement {
     Select {
         table_name: String,
         selection: Vec<String>,
+        where_clauses: HashMap<String, String>,
     },
     InsertInto {
         table_name: String,
@@ -32,6 +35,7 @@ impl fmt::Display for Statement {
             Self::Select {
                 table_name,
                 selection,
+                where_clauses,
             } => write!(f, "SELECT {} FROM {};", selection.join(", "), table_name),
             Self::InsertInto {
                 table_name,
