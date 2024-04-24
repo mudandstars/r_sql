@@ -7,6 +7,7 @@ use super::StatementParser;
 const SELECT_GRAPHEME: &str = "SELECT";
 const FROM_GRAPHEME: &str = "FROM";
 const WHERE_GRAPHEME: &str = "WHERE";
+const AND_GRAPHEME: &str = "AND";
 
 pub struct SelectStatementParser {
     state: ParserState,
@@ -38,7 +39,7 @@ impl StatementParser for SelectStatementParser {
                     }
                 }
                 ParserState::WhereClauses => {
-                    if grapheme != "=" && grapheme != "AND" {
+                    if grapheme != "=" && grapheme != AND_GRAPHEME {
                         if last_where_attribute.is_empty() {
                             last_where_attribute = grapheme;
                         } else {
@@ -130,6 +131,22 @@ mod tests {
         match query.unwrap().statement {
             Statement::Select { where_clauses, .. } => {
                 assert_eq!(where_clauses.get("id").unwrap(), "5")
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_can_create_a_parsed_input_from_a_select_query_with_multiple_where_statements() {
+        let input_parser = SqlParser();
+        let query = input_parser.parse_query(String::from(
+            "SELECT * FROM users WHERE ranking_number = 1 AND name = 'rust';",
+        ));
+
+        match query.unwrap().statement {
+            Statement::Select { where_clauses, .. } => {
+                assert_eq!(where_clauses.get("ranking_number").unwrap(), "1");
+                assert_eq!(where_clauses.get("name").unwrap(), "'rust'");
             }
             _ => panic!(),
         }
