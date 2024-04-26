@@ -14,33 +14,6 @@ pub struct BinaryEngine {
 }
 
 impl Engine for BinaryEngine {
-    fn execute(&self, query: Query) -> super::EngineResult {
-        match query.statement {
-            Statement::CreateTable {
-                table_name,
-                columns,
-            } => self.create_table(table_name, columns),
-            Statement::Select {
-                table_name,
-                selection,
-                where_clauses,
-            } => self.select(table_name, selection),
-            Statement::InsertInto {
-                table_name,
-                column_names,
-                values,
-            } => self.insert(table_name, column_names, values),
-        }
-    }
-}
-
-impl BinaryEngine {
-    pub fn new() -> Self {
-        let file_paths = FilePaths::new();
-
-        BinaryEngine { file_paths }
-    }
-
     fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> super::EngineResult {
         let table_path = self.file_paths.table_path(&table_name);
 
@@ -57,39 +30,6 @@ impl BinaryEngine {
             table: Some(table),
             records: None,
         })
-    }
-
-    fn store_meta_data(&self, table: &metadata::Table) -> io::Result<()> {
-        let serialized_table = &bincode::serialize(table).unwrap();
-
-        let mut file = fs::File::create(self.file_paths.meta_data_path(&table.name))?;
-        file.write_all(serialized_table)?;
-
-        for index in &table.indices {
-            fs::File::create(self.file_paths.index_path(&table.name, &index.name))?;
-        }
-
-        Ok(())
-    }
-
-    fn load_meta_data(&self, table_name: &str) -> io::Result<metadata::Table> {
-        let mut file = fs::File::open(self.file_paths.meta_data_path(table_name))?;
-
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
-
-        let result: bincode::Result<metadata::Table> = bincode::deserialize(&buffer[..]);
-
-        match result {
-            Ok(table) => Ok(table),
-            Err(e) => {
-                println!("{}", e);
-                Err(io::Error::new(
-                    io::ErrorKind::Interrupted,
-                    "bincode serialization error",
-                ))
-            }
-        }
     }
 
     fn insert(
@@ -162,6 +102,70 @@ impl BinaryEngine {
         })
     }
 
+    fn select(&self, table_name: String, column_names: Vec<String>) -> super::EngineResult {
+        let table = self.load_meta_data(&table_name);
+        if table.is_err() {
+            return Err(String::from("This table does not exist."));
+        }
+
+        if !self.all_column_names_exist_on_table(table.unwrap(), column_names.clone()) {
+            return Err(String::from(
+                "Please choose only columns that exist on this table.",
+            ));
+        }
+
+        let records = self.load_table_contents(&table_name, column_names);
+
+        match records {
+            Ok(records) => Ok(super::EngineResponse {
+                records: Some(records),
+                table: None,
+            }),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
+impl BinaryEngine {
+    pub fn new() -> Self {
+        let file_paths = FilePaths::new();
+
+        BinaryEngine { file_paths }
+    }
+
+    fn store_meta_data(&self, table: &metadata::Table) -> io::Result<()> {
+        let serialized_table = &bincode::serialize(table).unwrap();
+
+        let mut file = fs::File::create(self.file_paths.meta_data_path(&table.name))?;
+        file.write_all(serialized_table)?;
+
+        for index in &table.indices {
+            fs::File::create(self.file_paths.index_path(&table.name, &index.name))?;
+        }
+
+        Ok(())
+    }
+
+    fn load_meta_data(&self, table_name: &str) -> io::Result<metadata::Table> {
+        let mut file = fs::File::open(self.file_paths.meta_data_path(table_name))?;
+
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+
+        let result: bincode::Result<metadata::Table> = bincode::deserialize(&buffer[..]);
+
+        match result {
+            Ok(table) => Ok(table),
+            Err(e) => {
+                println!("{}", e);
+                Err(io::Error::new(
+                    io::ErrorKind::Interrupted,
+                    "bincode serialization error",
+                ))
+            }
+        }
+    }
+
     fn save_record(
         &self,
         record: dynamic_record::DynamicRecord,
@@ -205,29 +209,6 @@ impl BinaryEngine {
         file.write_all(&serialized)?;
 
         Ok(data_page_index)
-    }
-
-    fn select(&self, table_name: String, column_names: Vec<String>) -> super::EngineResult {
-        let table = self.load_meta_data(&table_name);
-        if table.is_err() {
-            return Err(String::from("This table does not exist."));
-        }
-
-        if !self.all_column_names_exist_on_table(table.unwrap(), column_names.clone()) {
-            return Err(String::from(
-                "Please choose only columns that exist on this table.",
-            ));
-        }
-
-        let records = self.load_table_contents(&table_name, column_names);
-
-        match records {
-            Ok(records) => Ok(super::EngineResponse {
-                records: Some(records),
-                table: None,
-            }),
-            Err(e) => Err(e.to_string()),
-        }
     }
 
     fn all_column_names_exist_on_table(&self, table: Table, column_names: Vec<String>) -> bool {
