@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::sql_type::SqlType;
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +49,37 @@ impl Table {
         self.latest_primary_key = new_key;
 
         new_key
+    }
+
+    pub fn data_page_indices(&self, where_clauses: &HashMap<String, String>) -> Option<Vec<usize>> {
+        let indexed_columns = self.indexed_columns_names();
+
+        for key in where_clauses.keys() {
+            if indexed_columns.contains(key) {
+                return Some(
+                    self.index(key)
+                        .unwrap()
+                        .data_page_indices(where_clauses.get(key).unwrap())
+                        .unwrap(),
+                );
+            }
+        }
+
+        None
+    }
+
+    fn index(&self, column_name: &str) -> Option<super::Index> {
+        self.indices
+            .iter()
+            .find(|index| index.column_name == column_name)
+            .cloned()
+    }
+
+    fn indexed_columns_names(&self) -> Vec<String> {
+        self.indices
+            .iter()
+            .map(|index| index.column_name.clone())
+            .collect()
     }
 }
 

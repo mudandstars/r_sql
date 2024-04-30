@@ -2,6 +2,8 @@ mod binary_engine;
 mod dynamic_record;
 mod file_paths;
 
+use std::collections::HashMap;
+
 use crate::metadata;
 use crate::sql_parser::query::Statement;
 use crate::{engine::binary_engine::BinaryEngine, sql_parser::query::Query};
@@ -23,7 +25,7 @@ pub trait Engine {
                 table_name,
                 selection,
                 where_clauses,
-            } => self.select(table_name, selection),
+            } => self.select(table_name, selection, where_clauses),
             Statement::InsertInto {
                 table_name,
                 column_names,
@@ -32,7 +34,7 @@ pub trait Engine {
         }
     }
 
-    fn select(&self, table_name: String, column_names: Vec<String>) -> EngineResult;
+    fn select(&self, table_name: String, column_names: Vec<String>, where_clauses: HashMap<String, String>) -> EngineResult;
     fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> EngineResult;
     fn insert(
         &self,

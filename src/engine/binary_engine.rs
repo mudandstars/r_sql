@@ -2,8 +2,7 @@ use super::dynamic_record;
 use super::file_paths::FilePaths;
 use super::Engine;
 use crate::metadata::{self, Table};
-use crate::sql_parser::query::{Query, Statement};
-use std::collections;
+use std::collections::{self, HashMap};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path;
@@ -102,19 +101,28 @@ impl Engine for BinaryEngine {
         })
     }
 
-    fn select(&self, table_name: String, column_names: Vec<String>) -> super::EngineResult {
+    fn select(
+        &self,
+        table_name: String,
+        column_names: Vec<String>,
+        where_clauses: HashMap<String, String>,
+    ) -> super::EngineResult {
         let table = self.load_meta_data(&table_name);
         if table.is_err() {
             return Err(String::from("This table does not exist."));
         }
+        let table = table.unwrap();
 
-        if !self.all_column_names_exist_on_table(table.unwrap(), column_names.clone()) {
+        let data_page_indices = table.data_page_indices(&where_clauses);
+
+        if !self.all_column_names_exist_on_table(table, column_names.clone()) {
             return Err(String::from(
                 "Please choose only columns that exist on this table.",
             ));
         }
 
-        let records = self.load_table_contents(&table_name, column_names);
+        let records =
+            self.load_table_contents(&table_name, column_names, where_clauses, data_page_indices);
 
         match records {
             Ok(records) => Ok(super::EngineResponse {
@@ -192,7 +200,7 @@ impl BinaryEngine {
 
         let mut existing_contents: Vec<dynamic_record::DynamicRecord> = vec![];
         if Path::new(&file_path).exists() {
-            existing_contents = self.load_records(file_path.as_str(), None).unwrap();
+            existing_contents = self.load_records(file_path.as_str(), None, None).unwrap();
         }
 
         existing_contents.push(record);
@@ -226,34 +234,53 @@ impl BinaryEngine {
         &self,
         table_name: &str,
         column_names: Vec<String>,
+        where_clauses: HashMap<String, String>,
+        data_page_indices: Option<Vec<usize>>,
     ) -> io::Result<Vec<dynamic_record::DynamicRecord>> {
-        let mut data_page_index = 1;
         let mut records: Vec<dynamic_record::DynamicRecord> = vec![];
 
-        loop {
-            let path = self.file_paths.data_page(table_name, data_page_index);
+        match data_page_indices {
+            Some(indices) => {
+                for index in indices {
+                    let path = self.file_paths.data_page(table_name, index);
 
-            if !path::Path::new(&path).exists() {
-                break;
+                    records.extend(
+                        self.load_records(&path, Some(&column_names), Some(&where_clauses))
+                            .unwrap(),
+                    );
+                }
+
+                Ok(records)
             }
+            None => {
+                let mut data_page_index = 1;
+                let mut records: Vec<dynamic_record::DynamicRecord> = vec![];
 
-            let mut file = fs::File::open(&path)?;
+                loop {
+                    let path = self.file_paths.data_page(table_name, data_page_index);
 
-            let mut buffer = Vec::new();
-            file.read_to_end(&mut buffer)?;
+                    if !path::Path::new(&path).exists() {
+                        break;
+                    }
 
-            records.extend(self.load_records(&path, Some(&column_names)).unwrap());
+                    records.extend(
+                        self.load_records(&path, Some(&column_names), Some(&where_clauses))
+                            .unwrap(),
+                    );
 
-            data_page_index += 1;
+                    data_page_index += 1;
+                }
+
+                Ok(records)
+            }
         }
-
-        Ok(records)
     }
 
     fn load_records(
         &self,
         path: &str,
         selected_columns: Option<&Vec<String>>,
+        where_clauses: Option<&HashMap<String, String>>,
     ) -> io::Result<Vec<dynamic_record::DynamicRecord>> {
         let mut records: Vec<dynamic_record::DynamicRecord> = vec![];
 
@@ -263,11 +290,23 @@ impl BinaryEngine {
 
         match bincode::deserialize::<Vec<dynamic_record::DynamicRecord>>(&buffer[..]) {
             Ok(mut current_data_page_records) => {
-                if selected_columns.is_some() {
+                dbg!(&current_data_page_records);
+                dbg!(&where_clauses);
+
+                if where_clauses.is_some() {
+                    current_data_page_records
+                        .retain(|record| record.entry_should_be_included(&where_clauses));
+                }
+
+                dbg!(&current_data_page_records);
+
+                if selected_columns.is_some() && !selected_columns.unwrap().is_empty() {
                     for record in current_data_page_records.iter_mut() {
                         record.filter_columns(selected_columns.unwrap());
                     }
                 }
+
+                dbg!(&current_data_page_records);
 
                 records.extend(current_data_page_records);
             }
@@ -282,6 +321,8 @@ impl BinaryEngine {
 
 #[cfg(test)]
 mod tests {
+    use tests::dynamic_record::Value;
+
     use super::*;
     use crate::io_test_context::FileTestContext;
 
@@ -369,7 +410,12 @@ mod tests {
 
         let table = engine.load_meta_data(context.table_name()).unwrap();
 
-        assert!(table.indices.first().unwrap().data_page("2").is_ok());
+        assert!(table
+            .indices
+            .first()
+            .unwrap()
+            .data_page_indices("2")
+            .is_ok());
     }
 
     #[test]
@@ -388,6 +434,48 @@ mod tests {
 
         assert_eq!(table.indices.len(), 1);
         assert_eq!(table.indices.first().unwrap().column_name, "id");
+    }
+
+    #[test]
+    fn test_automatically_increments_primary_key_if_none_given() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![vec!["name".to_string(), "VARCHAR".to_string()]],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string()],
+                vec![vec!["john".to_string()], vec!["doe".to_string()]],
+            )
+            .unwrap();
+
+        let records = engine
+            .select(context.table_name().to_string(), vec![], HashMap::new())
+            .unwrap()
+            .records
+            .unwrap();
+
+        assert!(records
+            .first()
+            .unwrap()
+            .fields
+            .get("id")
+            .unwrap()
+            .fullfills("1"));
+        assert!(records
+            .last()
+            .unwrap()
+            .fields
+            .get("id")
+            .unwrap()
+            .fullfills("2"));
     }
 
     #[test]
@@ -469,7 +557,11 @@ mod tests {
             )
             .unwrap();
 
-        let result = engine.select(context.table_name().to_string(), vec![String::from("name")]);
+        let result = engine.select(
+            context.table_name().to_string(),
+            vec![String::from("name")],
+            HashMap::new(),
+        );
 
         match result {
             Ok(response) => {
@@ -489,6 +581,7 @@ mod tests {
         let result = engine.select(
             String::from("non_existant_table"),
             vec![String::from("name")],
+            HashMap::new(),
         );
 
         if result.is_ok() {
@@ -519,10 +612,126 @@ mod tests {
         let result = engine.select(
             context.table_name().to_string(),
             vec![String::from("email")],
+            HashMap::new(),
         );
 
         if result.is_ok() {
             panic!()
+        }
+    }
+
+    #[test]
+    fn test_can_select_with_multiple_where_clauses() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string(), "email".to_string()],
+                vec![
+                    vec!["john".to_string(), "john".to_string()],
+                    vec!["doe".to_string(), "john".to_string()],
+                    vec!["martin".to_string(), "john".to_string()],
+                    vec!["doe".to_string(), "john".to_string()],
+                    vec!["some".to_string(), "some@mail.com".to_string()],
+                ],
+            )
+            .unwrap();
+
+        let mut where_clauses = HashMap::new();
+        where_clauses.insert(String::from("name"), "some".to_string());
+        where_clauses.insert(String::from("email"), "some@mail.com".to_string());
+
+        let result = engine.select(context.table_name().to_string(), vec![], where_clauses);
+
+        match result {
+            Ok(response) => {
+                let records = response.records.unwrap();
+                assert_eq!(records.len(), 1);
+
+                assert!(records
+                    .first()
+                    .unwrap()
+                    .fields
+                    .get("name")
+                    .unwrap()
+                    .fullfills("some"));
+
+                assert!(records
+                    .first()
+                    .unwrap()
+                    .fields
+                    .get("email")
+                    .unwrap()
+                    .fullfills("some@mail.com"));
+            }
+            Err(_) => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_can_select_with_where_clause() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string()],
+                vec![
+                    vec!["john".to_string()],
+                    vec!["doe".to_string()],
+                    vec!["martin".to_string()],
+                    vec!["doe".to_string()],
+                    vec!["some".to_string()],
+                ],
+            )
+            .unwrap();
+
+        let mut where_clauses = HashMap::new();
+        where_clauses.insert(String::from("id"), "1".to_string());
+
+        let result = engine.select(
+            context.table_name().to_string(),
+            vec![String::from("name")],
+            where_clauses,
+        );
+
+        match result {
+            Ok(response) => {
+                let records = response.records.unwrap();
+                assert_eq!(records.len(), 1);
+
+                assert!(records
+                    .first()
+                    .unwrap()
+                    .fields
+                    .get("name")
+                    .unwrap()
+                    .fullfills("john"));
+            }
+            Err(_) => panic!(),
         }
     }
 }
