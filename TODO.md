@@ -1,9 +1,11 @@
 -   indices
-    - NOW:
-        - use index file on select
+    - allow to add on cols
+    - allow a leaf to point to multiple data pages
+-   log success responses
 -   basic constraints
 -   implement DROP and UPDATE and DELETE and WHERE and AND
 -   implement WAL
+-   log operation time
 
 -   limitations:
     -   I don't handle the case that a single record exceeds the size of a datapage

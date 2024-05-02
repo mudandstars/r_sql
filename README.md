@@ -14,13 +14,12 @@
 
 ### What r_sql can do
 
-1. Parse simple queries (SELECT, INSERT INTO, CREATE TABLE)
+1. Parse simple queries (SELECT (WHERE, AND), INSERT INTO, CREATE TABLE)
 2. Handle simple reads/writes
+3. Use indices on columns for heavily improved read performance
+
 
 ### What r_sql cannot (yet) do
 
 1. More complex queries, including subqueries, SORT BY, ORDER BY, LIMIT, functions like COUNT() and the like
-2. Indices
-    1. on each primary key
-    2. available to add them
-3. Basic Constraints, such as NOT NULL, DEFAULT \_, UNIQUE, ..
+2. Basic Constraints, such as NOT NULL, DEFAULT \_, UNIQUE, ..
