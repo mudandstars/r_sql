@@ -27,6 +27,12 @@ impl Table {
                 continue;
             }
 
+            if column_vector.len() > 2 && column_vector[2].to_uppercase() == "PRIMARY KEY" {
+                primary_key.name = column_vector[0].clone();
+                primary_key.data_type = SqlType::from(column_vector[1].clone());
+                continue;
+            }
+
             columns.push(super::Column {
                 name: column_vector[0].clone(),
                 data_type: SqlType::from(column_vector[1].clone()),
@@ -37,7 +43,7 @@ impl Table {
         Table {
             name: table_name,
             columns,
-            indices: vec![super::Index::new(&primary_key.name)],
+            indices: vec![super::Index::new(format!("{}_index", &primary_key.name), &primary_key.name)],
             primary_key,
             latest_primary_key: 0,
         }

@@ -31,11 +31,27 @@ pub trait Engine {
                 column_names,
                 values,
             } => self.insert(table_name, column_names, values),
+            Statement::CreateIndex {
+                table_name,
+                column_name,
+                index_name,
+            } => self.create_index(table_name, column_name, index_name),
         }
     }
 
-    fn select(&self, table_name: String, column_names: Vec<String>, where_clauses: HashMap<String, String>) -> EngineResult;
+    fn select(
+        &self,
+        table_name: String,
+        column_names: Vec<String>,
+        where_clauses: HashMap<String, String>,
+    ) -> EngineResult;
     fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> EngineResult;
+    fn create_index(
+        &self,
+        table_name: String,
+        column_name: String,
+        index_name: String,
+    ) -> EngineResult;
     fn insert(
         &self,
         table_name: String,

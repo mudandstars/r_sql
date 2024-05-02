@@ -10,9 +10,9 @@ pub struct Index {
 }
 
 impl Index {
-    pub fn new(column_name: &str) -> Self {
+    pub fn new(index_name: String, column_name: &str) -> Self {
         Index {
-            name: format!("{}_index", column_name),
+            name: index_name,
             column_name: String::from(column_name),
             tree: BTreeMap::new(),
         }

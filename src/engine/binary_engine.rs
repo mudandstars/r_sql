@@ -31,6 +31,51 @@ impl Engine for BinaryEngine {
         })
     }
 
+    fn create_index(
+        &self,
+        table_name: String,
+        column_name: String,
+        index_name: String,
+    ) -> super::EngineResult {
+        let table_path = self.file_paths.table_path(&table_name);
+
+        if !path::Path::new(&table_path).exists() {
+            return Err(String::from("Table does not exist"));
+        }
+
+        let table = self.load_meta_data(&table_name);
+
+        match table {
+            Ok(table) => {
+                if table
+                    .columns
+                    .iter()
+                    .filter(|column| column.name == column_name)
+                    .collect::<Vec<&metadata::Column>>()
+                    .is_empty()
+                {
+                    return Err(format!(
+                        "'{}' does not exist on '{}'",
+                        column_name, table_name
+                    ));
+                }
+
+                let mut table = table;
+                table
+                    .indices
+                    .push(metadata::Index::new(index_name, &column_name));
+
+                self.store_meta_data(&table);
+
+                Ok(super::EngineResponse {
+                    table: Some(table),
+                    records: None,
+                })
+            }
+            Err(error) => Err(error.to_string()),
+        }
+    }
+
     fn insert(
         &self,
         table_name: String,
@@ -324,7 +369,7 @@ mod tests {
     use tests::dynamic_record::Value;
 
     use super::*;
-    use crate::io_test_context::FileTestContext;
+    use crate::{io_test_context::FileTestContext, sql_parser::query::Query};
 
     #[test]
     fn test_can_create_a_table_and_write_metadata_to_disk_correctly() {
@@ -383,6 +428,64 @@ mod tests {
             _ => panic!("failed"),
         }
         assert!(!table.primary_key.nullable);
+    }
+
+    #[test]
+    fn test_sets_primary_key_correctly_on_create_table_command() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec![
+                        "email".to_string(),
+                        "VARCHAR".to_string(),
+                        "PRIMARY KEY".to_string(),
+                    ],
+                ],
+            )
+            .unwrap();
+
+        let table = engine.load_meta_data(context.table_name()).unwrap();
+
+        assert_eq!(table.primary_key.name, "email");
+        match table.primary_key.data_type {
+            metadata::SqlType::Varchar => {}
+            _ => panic!("failed"),
+        }
+        assert!(!table.primary_key.nullable);
+    }
+
+    #[test]
+    fn test_can_set_indices_after_table_creation() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        engine
+            .create_index(
+                context.table_name().to_string(),
+                String::from("email"),
+                String::from("email_index"),
+            )
+            .unwrap();
+
+        let table = engine.load_meta_data(context.table_name()).unwrap();
+
+        assert_eq!(table.indices.len(), 2);
+        assert_eq!(table.indices.last().unwrap().column_name, "email");
     }
 
     #[test]

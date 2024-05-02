@@ -1,7 +1,6 @@
 use core::fmt;
 use std::collections::HashMap;
 
-
 pub enum Statement {
     Select {
         table_name: String,
@@ -17,6 +16,11 @@ pub enum Statement {
         table_name: String,
         columns: Vec<Vec<String>>,
     },
+    CreateIndex {
+        table_name: String,
+        column_name: String,
+        index_name: String,
+    },
 }
 
 impl Statement {
@@ -24,7 +28,8 @@ impl Statement {
         match self {
             Self::Select { table_name, .. }
             | Self::InsertInto { table_name, .. }
-            | Self::CreateTable { table_name, .. } => table_name,
+            | Self::CreateTable { table_name, .. }
+            | Self::CreateIndex { table_name, .. } => table_name,
         }
     }
 }
@@ -70,6 +75,17 @@ impl fmt::Display for Statement {
                     "CREATE TABLE {}(\n{}\n);",
                     table_name,
                     column_strings.join(",\n")
+                )
+            }
+            Self::CreateIndex {
+                table_name,
+                column_name,
+                index_name,
+            } => {
+                write!(
+                    f,
+                    "CREATE INDEX {}\nON {}({});",
+                    index_name, table_name, column_name
                 )
             }
         }

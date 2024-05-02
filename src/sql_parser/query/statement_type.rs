@@ -4,6 +4,7 @@ pub enum StatementType {
     Select,
     InsertInto,
     CreateTable,
+    CreateIndex,
 }
 
 impl StatementType {
@@ -27,6 +28,7 @@ impl StatementType {
             StatementType::Select => 1,
             StatementType::InsertInto => 2,
             StatementType::CreateTable => 3,
+            StatementType::CreateIndex => 4,
         }
     }
 }
@@ -37,6 +39,7 @@ impl From<&str> for StatementType {
             "SELECT" => StatementType::Select,
             "INSERT INTO" => StatementType::InsertInto,
             "CREATE TABLE" => StatementType::CreateTable,
+            "CREATE INDEX" => StatementType::CreateIndex,
             _ => StatementType::Invalid,
         }
     }
@@ -68,5 +71,11 @@ mod tests {
     fn test_creates_create_table_command_correctly() {
         let query_type = StatementType::new("create", "table");
         assert_eq!(query_type.id(), StatementType::CreateTable.id());
+    }
+
+    #[test]
+    fn test_creates_create_index_command_correctly() {
+        let query_type = StatementType::new("create", "index");
+        assert_eq!(query_type.id(), StatementType::CreateIndex.id());
     }
 }
