@@ -1,5 +1,4 @@
 -   indices
-    - allow to add on cols
     - allow a leaf to point to multiple data pages
 -   log success responses
 -   basic constraints

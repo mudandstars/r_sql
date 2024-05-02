@@ -14,7 +14,7 @@
 
 ### What r_sql can do
 
-1. Parse simple queries (SELECT (WHERE, AND), INSERT INTO, CREATE TABLE)
+1. Parse simple queries (SELECT (WHERE, AND), INSERT INTO, CREATE TABLE, CREATE INDEX)
 2. Handle simple reads/writes
 3. Use indices on columns for heavily improved read performance
 

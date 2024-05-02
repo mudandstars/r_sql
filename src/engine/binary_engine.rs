@@ -60,12 +60,29 @@ impl Engine for BinaryEngine {
                     ));
                 }
 
+                if !table
+                    .indices
+                    .iter()
+                    .filter(|index| index.column_name == column_name)
+                    .collect::<Vec<&metadata::Index>>()
+                    .is_empty()
+                {
+                    return Err(format!(
+                        "'{}({})' is already indexed.",
+                        table_name, column_name
+                    ));
+                }
+
                 let mut table = table;
                 table
                     .indices
                     .push(metadata::Index::new(index_name, &column_name));
 
-                self.store_meta_data(&table);
+                let result = self.store_meta_data(&table);
+
+                if result.is_err() {
+                    return Err("Error storing new meta-data.".to_string());
+                }
 
                 Ok(super::EngineResponse {
                     table: Some(table),
@@ -366,10 +383,8 @@ impl BinaryEngine {
 
 #[cfg(test)]
 mod tests {
-    use tests::dynamic_record::Value;
-
     use super::*;
-    use crate::{io_test_context::FileTestContext, sql_parser::query::Query};
+    use crate::io_test_context::FileTestContext;
 
     #[test]
     fn test_can_create_a_table_and_write_metadata_to_disk_correctly() {
@@ -486,6 +501,46 @@ mod tests {
 
         assert_eq!(table.indices.len(), 2);
         assert_eq!(table.indices.last().unwrap().column_name, "email");
+    }
+
+    #[test]
+    fn test_cannot_set_the_same_index_twice() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        engine
+            .create_index(
+                context.table_name().to_string(),
+                String::from("email"),
+                String::from("email_index"),
+            )
+            .unwrap();
+
+        match engine.create_index(
+            context.table_name().to_string(),
+            String::from("email"),
+            String::from("email_index"),
+        ) {
+            Ok(..) => panic!(),
+            Err(message) => assert_eq!(
+                message,
+                format!(
+                    "'{}({})' is already indexed.",
+                    context.table_name(),
+                    "email"
+                )
+            ),
+        }
     }
 
     #[test]
