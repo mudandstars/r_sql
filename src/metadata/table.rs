@@ -87,6 +87,18 @@ impl Table {
             .map(|index| index.column_name.clone())
             .collect()
     }
+
+    pub fn all_columns_exist(&self, column_names: Vec<String>) -> bool {
+        let actual_table_columns: Vec<String> =
+            self.columns.clone().into_iter().map(|val| val.name).collect();
+
+        let all_included = column_names
+            .iter()
+            .all(|item| actual_table_columns.contains(item));
+
+        all_included
+    }
+
 }
 
 #[cfg(test)]

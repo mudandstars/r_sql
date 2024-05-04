@@ -1,12 +1,19 @@
 mod binary_engine;
+mod create_index;
+mod create_table;
 mod dynamic_record;
 mod file_paths;
-
-use std::collections::HashMap;
+mod insert;
+mod select;
 
 use crate::metadata;
 use crate::sql_parser::query::Statement;
 use crate::{engine::binary_engine::BinaryEngine, sql_parser::query::Query};
+
+use self::create_index::CreateIndex;
+use self::create_table::CreateTable;
+use self::insert::Insert;
+use self::select::Select;
 
 pub fn io_engine_factory(storage_type: self::Type) -> Box<dyn self::Engine> {
     match storage_type {
@@ -14,7 +21,7 @@ pub fn io_engine_factory(storage_type: self::Type) -> Box<dyn self::Engine> {
     }
 }
 
-pub trait Engine {
+pub trait Engine: Select + CreateIndex + CreateTable + Insert {
     fn execute(&self, query: Query) -> EngineResult {
         match query.statement {
             Statement::CreateTable {
@@ -38,26 +45,6 @@ pub trait Engine {
             } => self.create_index(table_name, column_name, index_name),
         }
     }
-
-    fn select(
-        &self,
-        table_name: String,
-        column_names: Vec<String>,
-        where_clauses: HashMap<String, String>,
-    ) -> EngineResult;
-    fn create_table(&self, table_name: String, columns: Vec<Vec<String>>) -> EngineResult;
-    fn create_index(
-        &self,
-        table_name: String,
-        column_name: String,
-        index_name: String,
-    ) -> EngineResult;
-    fn insert(
-        &self,
-        table_name: String,
-        column_names: Vec<String>,
-        values: Vec<Vec<String>>,
-    ) -> EngineResult;
 }
 
 pub enum Type {
