@@ -1,8 +1,7 @@
 -   indices
     - allow a leaf to point to multiple data pages
--   log success responses
 -   basic constraints
--   implement DROP and UPDATE and DELETE and WHERE and AND
+-   implement DROP and UPDATE and DELETE
 -   implement WAL
 -   log operation time
 

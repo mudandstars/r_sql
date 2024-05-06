@@ -22,4 +22,4 @@
 ### What r_sql cannot (yet) do
 
 1. More complex queries, including subqueries, SORT BY, ORDER BY, LIMIT, functions like COUNT() and the like
-2. Basic Constraints, such as NOT NULL, DEFAULT \_, UNIQUE, ..
+2. Constraints, such as NOT NULL, DEFAULT \_, UNIQUE, ..
