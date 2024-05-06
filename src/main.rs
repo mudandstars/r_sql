@@ -1,4 +1,5 @@
 use r_sql::engine;
+use r_sql::engine::EngineResponse;
 use r_sql::SQLEngine;
 use std::env;
 use std::io::{stdin, stdout, Write};
@@ -22,10 +23,9 @@ fn run_engine_with_cli_arg(engine: SQLEngine, args: &mut std::env::Args) {
         .nth(1)
         .expect("Please specify one query wrapped in double quotes.");
 
-    match engine.execute(query) {
-        Ok(..) => println!("Success"),
-        Err(message) => println!("ERROR: {}", message),
-    }
+    let result = engine.execute(query);
+
+    log_engine_output(result);
 }
 
 fn run_engine_with_user_input(engine: SQLEngine) {
@@ -47,9 +47,25 @@ fn run_engine_with_user_input(engine: SQLEngine) {
             break;
         }
 
-        match engine.execute(user_query) {
-            Ok(..) => println!("Success"),
-            Err(message) => println!("ERROR: {}", message),
+        let result = engine.execute(user_query);
+
+        log_engine_output(result);
+    }
+}
+
+fn log_engine_output(response: Result<EngineResponse, String>) {
+    match response {
+        Ok(response) => {
+            println!("Success");
+
+            if response.table.is_some() {
+                println!("{:?}", response.table.unwrap());
+            }
+
+            if response.records.is_some() {
+                println!("{:?}", response.records.unwrap());
+            }
         }
+        Err(message) => println!("ERROR: {}", message),
     }
 }

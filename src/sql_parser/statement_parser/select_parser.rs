@@ -29,7 +29,7 @@ impl StatementParser for SelectStatementParser {
 
             match self.state {
                 ParserState::Selection => {
-                    if grapheme != SELECT_GRAPHEME && grapheme != "," {
+                    if grapheme.to_uppercase() != SELECT_GRAPHEME && grapheme != "," {
                         selection.push(grapheme);
                     }
                 }
@@ -129,8 +129,14 @@ mod tests {
         let query = input_parser.parse_query(String::from("SELECT * FROM users WHERE id = 5;"));
 
         match query.unwrap().statement {
-            Statement::Select { where_clauses, .. } => {
-                assert_eq!(where_clauses.get("id").unwrap(), "5")
+            Statement::Select {
+                where_clauses,
+                selection,
+                ..
+            } => {
+                assert_eq!(where_clauses.get("id").unwrap(), "5");
+                assert_eq!(selection.len(), 1);
+                assert_eq!(selection.first().unwrap(), "*");
             }
             _ => panic!(),
         }

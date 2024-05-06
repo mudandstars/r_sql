@@ -17,7 +17,7 @@ impl engine::Select for super::BinaryEngine {
 
         let data_page_indices = table.data_page_indices(&where_clauses);
 
-        if !table.all_columns_exist(column_names.clone()) {
+        if  !table.all_columns_exist(column_names.clone()) {
             return Err(String::from(
                 "Please choose only columns that exist on this table.",
             ));
@@ -247,6 +247,49 @@ mod tests {
                     .fullfills("john"));
             }
             Err(_) => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_can_select_everything_from_table() {
+        let context = FileTestContext::new();
+        let engine = BinaryEngine::new();
+
+        engine
+            .create_table(
+                context.table_name().to_string(),
+                vec![
+                    vec!["name".to_string(), "VARCHAR".to_string()],
+                    vec!["email".to_string(), "VARCHAR".to_string()],
+                ],
+            )
+            .unwrap();
+
+        engine
+            .insert(
+                context.table_name().to_string(),
+                vec!["name".to_string(), "email".to_string()],
+                vec![
+                    vec!["john".to_string(), "john@mail.com".to_string()],
+                    vec!["doe".to_string(), "doe@mail.com".to_string()],
+                ],
+            )
+            .unwrap();
+
+        let result = engine.select(
+            context.table_name().to_string(),
+            vec![String::from("*")],
+            HashMap::new(),
+        );
+
+        match result {
+            Ok(response) => {
+                let records = response.records.unwrap();
+                assert_eq!(records.len(), 2);
+                assert!(records.first().unwrap().fields.contains_key("name"));
+                assert!(records.first().unwrap().fields.contains_key("email"));
+            }
+            Err(message) => panic!("{}", message),
         }
     }
 }

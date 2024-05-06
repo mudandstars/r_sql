@@ -1,6 +1,7 @@
 use crate::engine::file_paths::FilePaths;
 
 use super::dynamic_record;
+use super::utils::selected_all_columns;
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
@@ -8,16 +9,13 @@ use std::path;
 use std::path::Path;
 use std::rc::Rc;
 
-
 pub struct DataManager {
     file_paths: Rc<FilePaths>,
 }
 
 impl DataManager {
     pub fn new(file_paths: Rc<FilePaths>) -> Self {
-        DataManager {
-            file_paths,
-        }
+        DataManager { file_paths }
     }
 
     pub fn save_record(
@@ -130,7 +128,10 @@ impl DataManager {
                         .retain(|record| record.entry_should_be_included(&where_clauses));
                 }
 
-                if selected_columns.is_some() && !selected_columns.unwrap().is_empty() {
+                if selected_columns.is_some()
+                    && !selected_columns.unwrap().is_empty()
+                    && !selected_all_columns(selected_columns.unwrap())
+                {
                     for record in current_data_page_records.iter_mut() {
                         record.filter_columns(selected_columns.unwrap());
                     }

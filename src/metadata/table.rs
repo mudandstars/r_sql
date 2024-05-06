@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::engine::utils::selected_all_columns;
+
 use super::sql_type::SqlType;
 use serde::{Deserialize, Serialize};
 
@@ -92,6 +94,10 @@ impl Table {
     }
 
     pub fn all_columns_exist(&self, column_names: Vec<String>) -> bool {
+        if selected_all_columns(&column_names) {
+            return true;
+        }
+
         let actual_table_columns: Vec<String> = self
             .columns
             .clone()

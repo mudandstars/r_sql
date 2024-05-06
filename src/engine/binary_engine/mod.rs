@@ -4,11 +4,12 @@ mod data_manager;
 mod insert;
 mod select;
 mod table_manager;
+pub mod utils;
 
 use std::rc::Rc;
 
-use self::data_manager::DataManager;
-use self::table_manager::TableManager;
+use data_manager::DataManager;
+use table_manager::TableManager;
 
 use super::Engine;
 use super::EngineResponse;

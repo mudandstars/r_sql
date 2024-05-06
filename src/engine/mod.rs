@@ -6,6 +6,7 @@ mod file_paths;
 mod insert;
 mod select;
 
+pub use crate::engine::binary_engine::utils;
 use crate::metadata;
 use crate::sql_parser::query::Statement;
 use crate::{engine::binary_engine::BinaryEngine, sql_parser::query::Query};
@@ -52,8 +53,8 @@ pub enum Type {
 }
 
 pub struct EngineResponse {
-    records: Option<Vec<dynamic_record::DynamicRecord>>,
-    table: Option<metadata::Table>,
+    pub records: Option<Vec<dynamic_record::DynamicRecord>>,
+    pub table: Option<metadata::Table>,
 }
 
 pub type EngineResult = std::result::Result<EngineResponse, String>;
