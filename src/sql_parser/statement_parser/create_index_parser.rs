@@ -14,8 +14,6 @@ impl StatementParser for CreateIndexStatementParser {
         let mut column_name = String::new();
         let mut index_name = String::new();
 
-        dbg!(&graphemes);
-
         for grapheme in graphemes {
             let changed_parser_state = self.change_parser_state(&grapheme);
 

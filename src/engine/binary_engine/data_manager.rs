@@ -125,23 +125,16 @@ impl DataManager {
 
         match bincode::deserialize::<Vec<dynamic_record::DynamicRecord>>(&buffer[..]) {
             Ok(mut current_data_page_records) => {
-                dbg!(&current_data_page_records);
-                dbg!(&where_clauses);
-
                 if where_clauses.is_some() {
                     current_data_page_records
                         .retain(|record| record.entry_should_be_included(&where_clauses));
                 }
-
-                dbg!(&current_data_page_records);
 
                 if selected_columns.is_some() && !selected_columns.unwrap().is_empty() {
                     for record in current_data_page_records.iter_mut() {
                         record.filter_columns(selected_columns.unwrap());
                     }
                 }
-
-                dbg!(&current_data_page_records);
 
                 records.extend(current_data_page_records);
             }

@@ -1,5 +1,6 @@
 pub const VARCHAR: &str = "VARCHAR";
 pub const INTEGER: &str = "INTEGER";
+pub const INTEGER_SHORTHAND: &str = "INT";
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub enum SqlType {
@@ -11,7 +12,7 @@ impl From<String> for SqlType {
     fn from(value: String) -> Self {
         match value.to_uppercase().as_ref() {
             VARCHAR => Self::Varchar,
-            INTEGER => Self::Integer,
+            INTEGER | INTEGER_SHORTHAND => Self::Integer,
             _ => panic!("Not a valid type"),
         }
     }

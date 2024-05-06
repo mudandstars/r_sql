@@ -43,7 +43,10 @@ impl Table {
         Table {
             name: table_name,
             columns,
-            indices: vec![super::Index::new(format!("{}_index", &primary_key.name), &primary_key.name)],
+            indices: vec![super::Index::new(
+                format!("{}_index", &primary_key.name),
+                &primary_key.name,
+            )],
             primary_key,
             latest_primary_key: 0,
         }
@@ -89,8 +92,12 @@ impl Table {
     }
 
     pub fn all_columns_exist(&self, column_names: Vec<String>) -> bool {
-        let actual_table_columns: Vec<String> =
-            self.columns.clone().into_iter().map(|val| val.name).collect();
+        let actual_table_columns: Vec<String> = self
+            .columns
+            .clone()
+            .into_iter()
+            .map(|val| val.name)
+            .collect();
 
         let all_included = column_names
             .iter()
@@ -98,7 +105,6 @@ impl Table {
 
         all_included
     }
-
 }
 
 #[cfg(test)]

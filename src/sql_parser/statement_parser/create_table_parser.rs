@@ -41,6 +41,15 @@ impl StatementParser for CreateTableStatementParser {
                         continue;
                     }
 
+                    if grapheme.to_uppercase() == "PRIMARY" {
+                        current_column.push(String::from("PRIMARY KEY"));
+                        continue;
+                    }
+
+                    if grapheme.to_uppercase() == "KEY" {
+                        continue;
+                    }
+
                     current_column.push(grapheme.to_string());
                 }
             }
