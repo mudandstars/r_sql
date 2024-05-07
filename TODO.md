@@ -3,7 +3,6 @@
 -   basic constraints
 -   implement DROP and UPDATE and DELETE
 -   implement WAL
--   log operation time
 
 -   limitations:
     -   I don't handle the case that a single record exceeds the size of a datapage
