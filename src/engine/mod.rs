@@ -1,11 +1,11 @@
 mod binary_engine;
 mod create_index;
 mod create_table;
-mod dynamic_record;
 mod file_paths;
 mod insert;
 mod select;
 
+use crate::dynamic_record;
 pub use crate::engine::binary_engine::utils;
 use crate::metadata;
 use crate::sql_parser::query::Statement;
